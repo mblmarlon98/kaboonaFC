@@ -1,6 +1,9 @@
 import React, { Component } from 'react';
 import { NavLink, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { connect } from 'react-redux';
+import { signOut } from '../../services/auth';
+import { logout } from '../../redux/slices/authSlice';
 
 class Navbar extends Component {
   constructor(props) {
@@ -34,6 +37,13 @@ class Navbar extends Component {
 
   closeMobileMenu = () => {
     this.setState({ isMobileMenuOpen: false });
+  };
+
+  handleLogout = async () => {
+    const { logout } = this.props;
+    await signOut();
+    logout();
+    this.closeMobileMenu();
   };
 
   render() {
@@ -132,16 +142,25 @@ class Navbar extends Component {
 
               {/* Auth Buttons or User Avatar */}
               {user ? (
-                <Link
-                  to="/profile"
-                  className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors"
-                >
-                  <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center">
-                    <span className="text-sm font-medium text-black">
-                      {user.name?.charAt(0) || 'U'}
-                    </span>
-                  </div>
-                </Link>
+                <div className="flex items-center space-x-3">
+                  <Link
+                    to="/profile"
+                    className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center">
+                      <span className="text-sm font-medium text-black">
+                        {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                      </span>
+                    </div>
+                  </Link>
+                  <motion.button
+                    onClick={this.handleLogout}
+                    whileTap={{ scale: 0.95 }}
+                    className="px-3 py-1.5 text-sm font-medium text-white/70 hover:text-white border border-white/20 rounded-md hover:border-white/40 transition-colors"
+                  >
+                    Logout
+                  </motion.button>
+                </div>
               ) : (
                 <div className="flex items-center space-x-2">
                   <Link
@@ -264,18 +283,26 @@ class Navbar extends Component {
                 {/* Mobile Auth Section */}
                 <div className="pt-4 mt-4 border-t border-white/10">
                   {user ? (
-                    <Link
-                      to="/profile"
-                      onClick={this.closeMobileMenu}
-                      className="flex items-center space-x-3 px-4 py-3 text-white/80 hover:text-white transition-colors"
-                    >
-                      <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center">
-                        <span className="text-sm font-medium text-black">
-                          {user.name?.charAt(0) || 'U'}
-                        </span>
-                      </div>
-                      <span>Profile</span>
-                    </Link>
+                    <div className="space-y-2">
+                      <Link
+                        to="/profile"
+                        onClick={this.closeMobileMenu}
+                        className="flex items-center space-x-3 px-4 py-3 text-white/80 hover:text-white transition-colors"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center">
+                          <span className="text-sm font-medium text-black">
+                            {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                          </span>
+                        </div>
+                        <span>Profile</span>
+                      </Link>
+                      <button
+                        onClick={this.handleLogout}
+                        className="block w-full px-4 py-3 text-base font-medium text-white/80 hover:text-white hover:bg-white/5 rounded-md text-left transition-colors"
+                      >
+                        Logout
+                      </button>
+                    </div>
                   ) : (
                     <div className="space-y-2">
                       <Link
@@ -304,4 +331,8 @@ class Navbar extends Component {
   }
 }
 
-export default Navbar;
+const mapDispatchToProps = {
+  logout,
+};
+
+export default connect(null, mapDispatchToProps)(Navbar);

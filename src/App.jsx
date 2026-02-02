@@ -1,16 +1,19 @@
 import React, { Component } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { connect } from 'react-redux';
 import { Layout } from './components/Layout';
 import Home from './pages/Home';
 import OurTeam from './pages/OurTeam';
+import { Login, Register, ForgotPassword } from './pages/Auth';
+import ProtectedRoute from './components/ProtectedRoute';
+import { onAuthStateChange, getSession } from './services/auth';
+import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 
 // Placeholder pages - will be implemented later
 const Stats = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Stats</h1></div>;
 const Shop = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Shop</h1></div>;
 const FanPortal = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Fan Portal</h1></div>;
 const Investors = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Investors</h1></div>;
-const Login = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Login</h1></div>;
-const Register = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Register</h1></div>;
 const TrainingSignup = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Training Signup</h1></div>;
 const Profile = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Profile</h1></div>;
 const Admin = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Admin Dashboard</h1></div>;
@@ -22,6 +25,7 @@ class App extends Component {
     this.state = {
       darkMode: true, // Default to dark mode (Netflix style)
     };
+    this.authSubscription = null;
   }
 
   componentDidMount() {
@@ -32,6 +36,41 @@ class App extends Component {
     }
     // Apply dark mode class
     this.applyDarkMode(savedMode === 'true' || savedMode === null);
+
+    // Initialize auth state
+    this.initializeAuth();
+  }
+
+  componentWillUnmount() {
+    // Clean up auth subscription
+    if (this.authSubscription) {
+      this.authSubscription.unsubscribe();
+    }
+  }
+
+  initializeAuth = async () => {
+    const { setUser, setSession, setLoading } = this.props;
+
+    // Get initial session
+    const { session } = await getSession();
+    if (session) {
+      setUser(session.user);
+      setSession(session);
+    }
+    setLoading(false);
+
+    // Subscribe to auth changes
+    this.authSubscription = onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        setUser(session.user);
+        setSession(session);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setSession(null);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
+        setSession(session);
+      }
+    });
   }
 
   applyDarkMode = (isDark) => {
@@ -54,12 +93,13 @@ class App extends Component {
 
   render() {
     const { darkMode } = this.state;
+    const { user } = this.props;
 
     return (
       <Layout
         darkMode={darkMode}
         toggleDarkMode={this.toggleDarkMode}
-        user={null} // Will be connected to auth state later
+        user={user}
       >
         <Routes>
           {/* Public Routes */}
@@ -73,11 +113,26 @@ class App extends Component {
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/training-signup" element={<TrainingSignup />} />
 
           {/* Protected Routes */}
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/profile/edit" element={<Profile />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile/edit"
+            element={
+              <ProtectedRoute>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Admin Routes */}
           <Route path="/admin" element={<Admin />} />
@@ -97,4 +152,15 @@ class App extends Component {
   }
 }
 
-export default App;
+const mapStateToProps = (state) => ({
+  user: state.auth?.user,
+  loading: state.auth?.loading,
+});
+
+const mapDispatchToProps = {
+  setUser,
+  setSession,
+  setLoading,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(App);
