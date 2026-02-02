@@ -2,9 +2,9 @@ import React, { Component } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import Home from './pages/Home';
+import OurTeam from './pages/OurTeam';
 
 // Placeholder pages - will be implemented later
-const OurTeam = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Our Team</h1></div>;
 const Stats = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Stats</h1></div>;
 const Shop = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Shop</h1></div>;
 const FanPortal = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Fan Portal</h1></div>;
