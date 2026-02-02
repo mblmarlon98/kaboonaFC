@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { Routes, Route } from 'react-router-dom';
+import { Layout } from './components/Layout';
 
 // Placeholder pages - will be implemented later
 const Home = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display text-accent-gold">KABOONA FC</h1></div>;
@@ -52,8 +53,14 @@ class App extends Component {
   };
 
   render() {
+    const { darkMode } = this.state;
+
     return (
-      <div className="min-h-screen">
+      <Layout
+        darkMode={darkMode}
+        toggleDarkMode={this.toggleDarkMode}
+        user={null} // Will be connected to auth state later
+      >
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
@@ -79,11 +86,13 @@ class App extends Component {
           {/* Legal Routes */}
           <Route path="/terms" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Terms & Conditions</h1></div>} />
           <Route path="/privacy" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Privacy Policy</h1></div>} />
+          <Route path="/refund" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Refund Policy</h1></div>} />
+          <Route path="/cookies" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Cookie Policy</h1></div>} />
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </div>
+      </Layout>
     );
   }
 }
