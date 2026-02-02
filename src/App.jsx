@@ -4,13 +4,13 @@ import { connect } from 'react-redux';
 import { Layout } from './components/Layout';
 import Home from './pages/Home';
 import OurTeam from './pages/OurTeam';
+import Stats from './pages/Stats';
 import { Login, Register, ForgotPassword } from './pages/Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import { onAuthStateChange, getSession } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 
 // Placeholder pages - will be implemented later
-const Stats = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Stats</h1></div>;
 const Shop = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Shop</h1></div>;
 const FanPortal = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Fan Portal</h1></div>;
 const Investors = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Investors</h1></div>;
