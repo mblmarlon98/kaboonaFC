@@ -11,12 +11,12 @@ import Investors from './pages/Investors';
 import TrainingSignup from './pages/TrainingSignup';
 import { Login, Register, ForgotPassword } from './pages/Auth';
 import { Profile, ProfileEdit } from './pages/Profile';
+import Admin from './pages/Admin';
 import ProtectedRoute from './components/ProtectedRoute';
 import { onAuthStateChange, getSession } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 
-// Placeholder pages - will be implemented later
-const Admin = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Admin Dashboard</h1></div>;
+// Placeholder pages
 const NotFound = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">404 - Not Found</h1></div>;
 
 class App extends Component {
@@ -134,9 +134,15 @@ class App extends Component {
             }
           />
 
-          {/* Admin Routes */}
-          <Route path="/admin" element={<Admin />} />
-          <Route path="/admin/*" element={<Admin />} />
+          {/* Admin Routes - Protected with role check inside Admin component */}
+          <Route
+            path="/admin/*"
+            element={
+              <ProtectedRoute>
+                <Admin />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Legal Routes */}
           <Route path="/terms" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Terms & Conditions</h1></div>} />
