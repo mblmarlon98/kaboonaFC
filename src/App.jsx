@@ -10,12 +10,12 @@ import FanPortal from './pages/FanPortal';
 import Investors from './pages/Investors';
 import TrainingSignup from './pages/TrainingSignup';
 import { Login, Register, ForgotPassword } from './pages/Auth';
+import { Profile, ProfileEdit } from './pages/Profile';
 import ProtectedRoute from './components/ProtectedRoute';
 import { onAuthStateChange, getSession } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 
 // Placeholder pages - will be implemented later
-const Profile = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Profile</h1></div>;
 const Admin = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Admin Dashboard</h1></div>;
 const NotFound = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">404 - Not Found</h1></div>;
 
@@ -129,7 +129,7 @@ class App extends Component {
             path="/profile/edit"
             element={
               <ProtectedRoute>
-                <Profile />
+                <ProfileEdit />
               </ProtectedRoute>
             }
           />
