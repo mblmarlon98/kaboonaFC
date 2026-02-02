@@ -5,15 +5,15 @@ import { Layout } from './components/Layout';
 import Home from './pages/Home';
 import OurTeam from './pages/OurTeam';
 import Stats from './pages/Stats';
+import Shop from './pages/Shop';
+import FanPortal from './pages/FanPortal';
+import Investors from './pages/Investors';
 import { Login, Register, ForgotPassword } from './pages/Auth';
 import ProtectedRoute from './components/ProtectedRoute';
 import { onAuthStateChange, getSession } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 
 // Placeholder pages - will be implemented later
-const Shop = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Shop</h1></div>;
-const FanPortal = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Fan Portal</h1></div>;
-const Investors = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Investors</h1></div>;
 const TrainingSignup = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Training Signup</h1></div>;
 const Profile = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Profile</h1></div>;
 const Admin = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">Admin Dashboard</h1></div>;
