@@ -128,7 +128,7 @@ class Investors extends Component {
                 <span className="text-accent-gold">Kaboona FC</span>
               </h1>
               <p className="text-xl text-white/60 max-w-3xl mx-auto mb-8">
-                Join our community of supporters and help shape the future of football at Sunway University.
+                Join our community of supporters and help shape the future of Kaboona FC.
                 Every contribution, big or small, makes a difference in our players' journey.
               </p>
 

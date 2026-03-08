@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
+import { ALL_MATCHES } from '../../../data/matches';
 
 /**
  * Recent matches list showing last 5 matches with player ratings
@@ -37,64 +38,14 @@ class RecentMatches extends Component {
   render() {
     const { matches } = this.props;
 
-    // Mock data for recent matches
-    const mockMatches = matches || [
-      {
-        id: 1,
-        date: '2024-01-28',
-        opponent: 'FC Barcelona B',
-        score: '3-1',
-        result: 'W',
-        rating: 8.5,
-        goals: 1,
-        assists: 1,
-        minutesPlayed: 90,
-      },
-      {
-        id: 2,
-        date: '2024-01-21',
-        opponent: 'Real Madrid C',
-        score: '2-2',
-        result: 'D',
-        rating: 7.2,
-        goals: 1,
-        assists: 0,
-        minutesPlayed: 78,
-      },
-      {
-        id: 3,
-        date: '2024-01-14',
-        opponent: 'Atletico Youth',
-        score: '0-1',
-        result: 'L',
-        rating: 5.8,
-        goals: 0,
-        assists: 0,
-        minutesPlayed: 90,
-      },
-      {
-        id: 4,
-        date: '2024-01-07',
-        opponent: 'Sevilla Reserves',
-        score: '4-2',
-        result: 'W',
-        rating: 9.1,
-        goals: 2,
-        assists: 1,
-        minutesPlayed: 90,
-      },
-      {
-        id: 5,
-        date: '2023-12-31',
-        opponent: 'Valencia B',
-        score: '2-0',
-        result: 'W',
-        rating: 7.8,
-        goals: 0,
-        assists: 2,
-        minutesPlayed: 85,
-      },
-    ];
+    // Use real match data, most recent 5
+    const mockMatches = matches || ALL_MATCHES.slice(0, 5).map(m => ({
+      id: m.id,
+      date: m.date,
+      opponent: m.opponent,
+      score: m.score,
+      result: m.result,
+    }));
 
     return (
       <motion.div
@@ -139,10 +90,12 @@ class RecentMatches extends Component {
                   {match.score}
                 </div>
 
-                {/* Rating */}
-                <div className={`px-3 py-1 rounded-lg font-bold text-sm ml-4 shrink-0 ${this.getRatingColor(match.rating)}`}>
-                  {match.rating.toFixed(1)}
-                </div>
+                {/* Rating (if available) */}
+                {match.rating && (
+                  <div className={`px-3 py-1 rounded-lg font-bold text-sm ml-4 shrink-0 ${this.getRatingColor(match.rating)}`}>
+                    {match.rating.toFixed(1)}
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}

@@ -1,23 +1,8 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
-
-/**
- * Mock data for league table
- */
-const MOCK_LEAGUE_DATA = [
-  { position: 1, team: 'Tigers FC', played: 14, won: 11, drawn: 2, lost: 1, goalsFor: 38, goalsAgainst: 12, gd: 26, points: 35 },
-  { position: 2, team: 'Sunway United', played: 14, won: 10, drawn: 3, lost: 1, goalsFor: 32, goalsAgainst: 14, gd: 18, points: 33 },
-  { position: 3, team: 'KABOONA FC', played: 14, won: 9, drawn: 3, lost: 2, goalsFor: 29, goalsAgainst: 15, gd: 14, points: 30, isKaboona: true },
-  { position: 4, team: 'Phoenix Stars', played: 14, won: 8, drawn: 2, lost: 4, goalsFor: 26, goalsAgainst: 18, gd: 8, points: 26 },
-  { position: 5, team: 'Warriors SC', played: 14, won: 7, drawn: 3, lost: 4, goalsFor: 24, goalsAgainst: 20, gd: 4, points: 24 },
-  { position: 6, team: 'Thunder Bay FC', played: 14, won: 6, drawn: 4, lost: 4, goalsFor: 22, goalsAgainst: 21, gd: 1, points: 22 },
-  { position: 7, team: 'Royal Eagles', played: 14, won: 5, drawn: 5, lost: 4, goalsFor: 20, goalsAgainst: 19, gd: 1, points: 20 },
-  { position: 8, team: 'City Rangers', played: 14, won: 5, drawn: 4, lost: 5, goalsFor: 18, goalsAgainst: 22, gd: -4, points: 19 },
-  { position: 9, team: 'United Stars', played: 14, won: 4, drawn: 4, lost: 6, goalsFor: 17, goalsAgainst: 24, gd: -7, points: 16 },
-  { position: 10, team: 'Northern FC', played: 14, won: 3, drawn: 4, lost: 7, goalsFor: 15, goalsAgainst: 26, gd: -11, points: 13 },
-  { position: 11, team: 'Coastal United', played: 14, won: 2, drawn: 3, lost: 9, goalsFor: 12, goalsAgainst: 30, gd: -18, points: 9 },
-  { position: 12, team: 'Valley FC', played: 14, won: 1, drawn: 1, lost: 12, goalsFor: 8, goalsAgainst: 40, gd: -32, points: 4 },
-];
+import { SUNDAY_LEAGUE_TABLE, THIRD_DIV_LEAGUE_TABLE } from '../../../data/matches';
+import liveData from '../../../data/league-live.json';
+import { TeamLogo } from '../../../data/teamLogos';
 
 /**
  * LeagueTable - Full league standings with Kaboona highlighted
@@ -27,6 +12,7 @@ class LeagueTable extends Component {
     super(props);
     this.state = {
       leagueData: [],
+      activeLeague: 'third-div',
       isLoading: true,
     };
   }
@@ -36,31 +22,38 @@ class LeagueTable extends Component {
   }
 
   fetchLeagueData = async () => {
-    try {
-      // Try to fetch from Supabase (placeholder for real implementation)
-      // For now, use mock data
-      setTimeout(() => {
-        this.setState({
-          leagueData: MOCK_LEAGUE_DATA,
-          isLoading: false,
-        });
-      }, 500);
-    } catch (error) {
-      console.warn('Error fetching league data:', error);
-      this.setState({
-        leagueData: MOCK_LEAGUE_DATA,
-        isLoading: false,
-      });
-    }
+    // Use live scraped data if available, fallback to static
+    const liveStandings = liveData?.standings?.length > 0
+      ? liveData.standings.map(t => ({ ...t, isKaboona: t.isKaboona || t.team?.toLowerCase().includes('kaboona') }))
+      : null;
+
+    this.setState({
+      leagueData: liveStandings || THIRD_DIV_LEAGUE_TABLE,
+      lastUpdated: liveData?.lastUpdated || null,
+      isLoading: false,
+    });
+  };
+
+  switchLeague = (league) => {
+    const liveStandings = liveData?.standings?.length > 0
+      ? liveData.standings.map(t => ({ ...t, isKaboona: t.isKaboona || t.team?.toLowerCase().includes('kaboona') }))
+      : null;
+
+    this.setState({
+      activeLeague: league,
+      leagueData: league === 'third-div' ? (liveStandings || THIRD_DIV_LEAGUE_TABLE) : SUNDAY_LEAGUE_TABLE,
+    });
   };
 
   renderPositionBadge = (position) => {
-    if (position <= 3) {
+    const { leagueData } = this.state;
+    const totalTeams = leagueData.length;
+    if (position <= 2) {
       // Promotion zone
       return (
         <div className="w-2 h-full absolute left-0 top-0 bg-green-500" />
       );
-    } else if (position >= 11) {
+    } else if (position >= totalTeams) {
       // Relegation zone
       return (
         <div className="w-2 h-full absolute left-0 top-0 bg-red-500" />
@@ -70,7 +63,7 @@ class LeagueTable extends Component {
   };
 
   render() {
-    const { leagueData, isLoading } = this.state;
+    const { leagueData, isLoading, activeLeague } = this.state;
 
     if (isLoading) {
       return (
@@ -102,7 +95,28 @@ class LeagueTable extends Component {
             </svg>
             League Standings
           </h3>
-          <p className="text-white/50 text-sm mt-1">Season 2024/25</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              onClick={() => this.switchLeague('third-div')}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                activeLeague === 'third-div'
+                  ? 'bg-accent-gold text-black font-semibold'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20'
+              }`}
+            >
+              New Camp Edition Div 3 (Ongoing)
+            </button>
+            <button
+              onClick={() => this.switchLeague('sunday')}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                activeLeague === 'sunday'
+                  ? 'bg-accent-gold text-black font-semibold'
+                  : 'bg-white/10 text-white/60 hover:bg-white/20'
+              }`}
+            >
+              Sunday Edition
+            </button>
+          </div>
         </div>
 
         {/* Legend */}
@@ -153,10 +167,11 @@ class LeagueTable extends Component {
                   </td>
                   <td className={`py-4 px-4 font-medium ${team.isKaboona ? 'text-accent-gold' : 'text-white/90'}`}>
                     <div className="flex items-center gap-2">
+                      <TeamLogo teamName={team.team} size={24} />
+                      {team.team}
                       {team.isKaboona && (
                         <div className="w-2 h-2 bg-accent-gold rounded-full animate-pulse" />
                       )}
-                      {team.team}
                     </div>
                   </td>
                   <td className="py-4 px-4 text-center text-white/70 hidden sm:table-cell">{team.played}</td>

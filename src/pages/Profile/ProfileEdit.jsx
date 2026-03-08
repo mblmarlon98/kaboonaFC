@@ -6,10 +6,12 @@ import PlayerFIFACard from './components/PlayerFIFACard';
 import StatSlider from './components/StatSlider';
 import { supabase } from '../../services/supabase';
 import { setUser } from '../../redux/slices/authSlice';
+import { createNotification } from '../../services/notificationService';
 
 /**
  * Profile Edit page
  * Allows users to edit personal info, player info, and self-rated stats
+ * Supports wizard mode when ?setup=true is in URL
  */
 class ProfileEdit extends Component {
   constructor(props) {
@@ -20,6 +22,8 @@ class ProfileEdit extends Component {
       hasChanges: false,
       redirectToProfile: false,
       photoFile: null, // Store the actual file for upload
+      isSetup: false,
+      setupStep: 1,
       formData: {
         // Personal Info
         name: '',
@@ -53,7 +57,13 @@ class ProfileEdit extends Component {
 
   componentDidMount() {
     window.scrollTo(0, 0);
-    this.loadProfileData();
+
+    // Check for setup mode via URL param
+    const searchParams = new URLSearchParams(window.location.search);
+    const isSetup = searchParams.get('setup') === 'true';
+    this.setState({ isSetup }, () => {
+      this.loadProfileData();
+    });
   }
 
   loadProfileData = async () => {
@@ -216,6 +226,41 @@ class ProfileEdit extends Component {
     return Object.keys(errors).length === 0;
   };
 
+  validateSetupStep = () => {
+    const { setupStep, formData } = this.state;
+    const errors = {};
+
+    if (setupStep === 1) {
+      if (!formData.name.trim()) {
+        errors.name = 'Name is required';
+      }
+    }
+
+    if (setupStep === 2) {
+      if (formData.number < 1 || formData.number > 99) {
+        errors.number = 'Jersey number must be between 1-99';
+      }
+    }
+
+    this.setState({ errors });
+    return Object.keys(errors).length === 0;
+  };
+
+  handleSetupNext = () => {
+    if (!this.validateSetupStep()) return;
+    this.setState((prevState) => ({
+      setupStep: Math.min(prevState.setupStep + 1, 3),
+    }));
+    window.scrollTo(0, 0);
+  };
+
+  handleSetupBack = () => {
+    this.setState((prevState) => ({
+      setupStep: Math.max(prevState.setupStep - 1, 1),
+    }));
+    window.scrollTo(0, 0);
+  };
+
   handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -308,47 +353,80 @@ class ProfileEdit extends Component {
         .eq('user_id', user.id)
         .single();
 
+      // Determine if GK stats or outfield stats
+      const isGoalkeeper = formData.position === 'GK';
+      const playerData = {
+        name: formData.name,
+        image: avatarUrl,
+        position: formData.position,
+        jersey_number: parseInt(formData.number) || 10,
+        height: formData.height ? parseInt(formData.height) : null,
+        weight: formData.weight ? parseInt(formData.weight) : null,
+        preferred_foot: formData.preferredFoot?.toLowerCase() || 'right',
+        country: formData.country,
+        alternate_positions: formData.alternatePositions || [],
+        skill_moves: formData.skillMoves || 3,
+        weak_foot_rating: formData.weakFoot || 3,
+      };
+
+      // Add stats based on position
+      if (isGoalkeeper) {
+        playerData.diving = formData.stats.diving || 50;
+        playerData.handling = formData.stats.handling || 50;
+        playerData.kicking = formData.stats.kicking || 50;
+        playerData.reflexes = formData.stats.reflexes || 50;
+        playerData.gk_speed = formData.stats.speed || 50;
+        playerData.gk_positioning = formData.stats.positioning || 50;
+      } else {
+        playerData.pace = formData.stats.pace || 50;
+        playerData.shooting = formData.stats.shooting || 50;
+        playerData.passing = formData.stats.passing || 50;
+        playerData.dribbling = formData.stats.dribbling || 50;
+        playerData.defending = formData.stats.defending || 50;
+        playerData.physical = formData.stats.physical || 50;
+      }
+
       if (existingPlayer) {
-        // Determine if GK stats or outfield stats
-        const isGoalkeeper = formData.position === 'GK';
-        const playerUpdate = {
-          name: formData.name,
-          image: avatarUrl,
-          position: formData.position,
-          jersey_number: parseInt(formData.number) || 10,
-          height: formData.height ? parseInt(formData.height) : null,
-          weight: formData.weight ? parseInt(formData.weight) : null,
-          preferred_foot: formData.preferredFoot?.toLowerCase() || 'right',
-          country: formData.country,
-          alternate_positions: formData.alternatePositions || [],
-          skill_moves: formData.skillMoves || 3,
-          weak_foot_rating: formData.weakFoot || 3,
-        };
-
-        // Add stats based on position
-        if (isGoalkeeper) {
-          playerUpdate.diving = formData.stats.diving || 50;
-          playerUpdate.handling = formData.stats.handling || 50;
-          playerUpdate.kicking = formData.stats.kicking || 50;
-          playerUpdate.reflexes = formData.stats.reflexes || 50;
-          playerUpdate.gk_speed = formData.stats.speed || 50;
-          playerUpdate.gk_positioning = formData.stats.positioning || 50;
-        } else {
-          playerUpdate.pace = formData.stats.pace || 50;
-          playerUpdate.shooting = formData.stats.shooting || 50;
-          playerUpdate.passing = formData.stats.passing || 50;
-          playerUpdate.dribbling = formData.stats.dribbling || 50;
-          playerUpdate.defending = formData.stats.defending || 50;
-          playerUpdate.physical = formData.stats.physical || 50;
-        }
-
         const { error: playerError } = await supabase
           .from('players')
-          .update(playerUpdate)
+          .update(playerData)
           .eq('user_id', user.id);
 
         if (playerError) {
           console.warn('Could not update players table:', playerError);
+        }
+      } else if (this.state.isSetup) {
+        // Create new player record during setup wizard
+        playerData.user_id = user.id;
+        const { error: playerInsertError } = await supabase
+          .from('players')
+          .insert(playerData);
+
+        if (playerInsertError) {
+          console.warn('Could not create player record:', playerInsertError);
+        }
+
+        // Notify admin/coach about new player registration
+        try {
+          const { data: admins } = await supabase
+            .from('profiles')
+            .select('id')
+            .in('role', ['admin', 'coach']);
+
+          if (admins && admins.length > 0) {
+            for (const admin of admins) {
+              await createNotification({
+                userId: admin.id,
+                title: 'New Player Registered',
+                body: `New player registered: ${formData.name}`,
+                type: 'info',
+                referenceType: 'player',
+                referenceId: user.id,
+              });
+            }
+          }
+        } catch (notifError) {
+          console.warn('Could not send admin notifications:', notifError);
         }
       }
 
@@ -371,6 +449,15 @@ class ProfileEdit extends Component {
         errors: { submit: error.message || 'Failed to save profile' },
       });
     }
+  };
+
+  handleSetupComplete = async (e) => {
+    // Validate final step before submitting
+    if (!this.validateSetupStep()) return;
+    // Mark as having changes so submit proceeds
+    this.setState({ hasChanges: true }, () => {
+      this.handleSubmit(e);
+    });
   };
 
   handleManageSubscription = () => {
@@ -411,8 +498,526 @@ class ProfileEdit extends Component {
     </div>
   );
 
+  renderStepIndicator = () => {
+    const { setupStep } = this.state;
+    const steps = [
+      { num: 1, label: 'Basic Info' },
+      { num: 2, label: 'Player Details' },
+      { num: 3, label: 'Rate Stats' },
+    ];
+
+    return (
+      <div className="mb-8">
+        <div className="flex items-center justify-center mb-2">
+          <span className="text-accent-gold font-display font-bold text-lg">
+            Step {setupStep} of 3
+          </span>
+        </div>
+        <div className="flex items-center justify-center gap-2 max-w-md mx-auto">
+          {steps.map((step, index) => (
+            <React.Fragment key={step.num}>
+              <div className="flex flex-col items-center">
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all ${
+                    setupStep === step.num
+                      ? 'bg-accent-gold text-black'
+                      : setupStep > step.num
+                      ? 'bg-green-500 text-white'
+                      : 'bg-white/10 text-white/40'
+                  }`}
+                >
+                  {setupStep > step.num ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    step.num
+                  )}
+                </div>
+                <span className={`text-xs mt-1 ${
+                  setupStep === step.num ? 'text-accent-gold' : 'text-white/40'
+                }`}>
+                  {step.label}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`flex-1 h-0.5 mt-[-16px] ${
+                  setupStep > step.num ? 'bg-green-500' : 'bg-white/10'
+                }`} />
+              )}
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  renderSetupWizard = () => {
+    const { setupStep, formData, errors, isSaving } = this.state;
+
+    const positions = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
+    const isGoalkeeper = formData.position === 'GK';
+
+    const countries = [
+      { code: 'af', name: 'Afghanistan', flag: '\u{1F1E6}\u{1F1EB}' },
+      { code: 'al', name: 'Albania', flag: '\u{1F1E6}\u{1F1F1}' },
+      { code: 'dz', name: 'Algeria', flag: '\u{1F1E9}\u{1F1FF}' },
+      { code: 'ar', name: 'Argentina', flag: '\u{1F1E6}\u{1F1F7}' },
+      { code: 'au', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}' },
+      { code: 'at', name: 'Austria', flag: '\u{1F1E6}\u{1F1F9}' },
+      { code: 'be', name: 'Belgium', flag: '\u{1F1E7}\u{1F1EA}' },
+      { code: 'br', name: 'Brazil', flag: '\u{1F1E7}\u{1F1F7}' },
+      { code: 'bg', name: 'Bulgaria', flag: '\u{1F1E7}\u{1F1EC}' },
+      { code: 'cm', name: 'Cameroon', flag: '\u{1F1E8}\u{1F1F2}' },
+      { code: 'ca', name: 'Canada', flag: '\u{1F1E8}\u{1F1E6}' },
+      { code: 'cl', name: 'Chile', flag: '\u{1F1E8}\u{1F1F1}' },
+      { code: 'cn', name: 'China', flag: '\u{1F1E8}\u{1F1F3}' },
+      { code: 'co', name: 'Colombia', flag: '\u{1F1E8}\u{1F1F4}' },
+      { code: 'cr', name: 'Costa Rica', flag: '\u{1F1E8}\u{1F1F7}' },
+      { code: 'hr', name: 'Croatia', flag: '\u{1F1ED}\u{1F1F7}' },
+      { code: 'cz', name: 'Czech Republic', flag: '\u{1F1E8}\u{1F1FF}' },
+      { code: 'dk', name: 'Denmark', flag: '\u{1F1E9}\u{1F1F0}' },
+      { code: 'ec', name: 'Ecuador', flag: '\u{1F1EA}\u{1F1E8}' },
+      { code: 'eg', name: 'Egypt', flag: '\u{1F1EA}\u{1F1EC}' },
+      { code: 'gb-eng', name: 'England', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
+      { code: 'fi', name: 'Finland', flag: '\u{1F1EB}\u{1F1EE}' },
+      { code: 'fr', name: 'France', flag: '\u{1F1EB}\u{1F1F7}' },
+      { code: 'de', name: 'Germany', flag: '\u{1F1E9}\u{1F1EA}' },
+      { code: 'gh', name: 'Ghana', flag: '\u{1F1EC}\u{1F1ED}' },
+      { code: 'gr', name: 'Greece', flag: '\u{1F1EC}\u{1F1F7}' },
+      { code: 'hu', name: 'Hungary', flag: '\u{1F1ED}\u{1F1FA}' },
+      { code: 'is', name: 'Iceland', flag: '\u{1F1EE}\u{1F1F8}' },
+      { code: 'in', name: 'India', flag: '\u{1F1EE}\u{1F1F3}' },
+      { code: 'id', name: 'Indonesia', flag: '\u{1F1EE}\u{1F1E9}' },
+      { code: 'ir', name: 'Iran', flag: '\u{1F1EE}\u{1F1F7}' },
+      { code: 'ie', name: 'Ireland', flag: '\u{1F1EE}\u{1F1EA}' },
+      { code: 'il', name: 'Israel', flag: '\u{1F1EE}\u{1F1F1}' },
+      { code: 'it', name: 'Italy', flag: '\u{1F1EE}\u{1F1F9}' },
+      { code: 'ci', name: 'Ivory Coast', flag: '\u{1F1E8}\u{1F1EE}' },
+      { code: 'jp', name: 'Japan', flag: '\u{1F1EF}\u{1F1F5}' },
+      { code: 'ke', name: 'Kenya', flag: '\u{1F1F0}\u{1F1EA}' },
+      { code: 'kr', name: 'South Korea', flag: '\u{1F1F0}\u{1F1F7}' },
+      { code: 'my', name: 'Malaysia', flag: '\u{1F1F2}\u{1F1FE}' },
+      { code: 'mx', name: 'Mexico', flag: '\u{1F1F2}\u{1F1FD}' },
+      { code: 'ma', name: 'Morocco', flag: '\u{1F1F2}\u{1F1E6}' },
+      { code: 'nl', name: 'Netherlands', flag: '\u{1F1F3}\u{1F1F1}' },
+      { code: 'nz', name: 'New Zealand', flag: '\u{1F1F3}\u{1F1FF}' },
+      { code: 'ng', name: 'Nigeria', flag: '\u{1F1F3}\u{1F1EC}' },
+      { code: 'no', name: 'Norway', flag: '\u{1F1F3}\u{1F1F4}' },
+      { code: 'pk', name: 'Pakistan', flag: '\u{1F1F5}\u{1F1F0}' },
+      { code: 'pa', name: 'Panama', flag: '\u{1F1F5}\u{1F1E6}' },
+      { code: 'py', name: 'Paraguay', flag: '\u{1F1F5}\u{1F1FE}' },
+      { code: 'pe', name: 'Peru', flag: '\u{1F1F5}\u{1F1EA}' },
+      { code: 'ph', name: 'Philippines', flag: '\u{1F1F5}\u{1F1ED}' },
+      { code: 'pl', name: 'Poland', flag: '\u{1F1F5}\u{1F1F1}' },
+      { code: 'pt', name: 'Portugal', flag: '\u{1F1F5}\u{1F1F9}' },
+      { code: 'qa', name: 'Qatar', flag: '\u{1F1F6}\u{1F1E6}' },
+      { code: 'ro', name: 'Romania', flag: '\u{1F1F7}\u{1F1F4}' },
+      { code: 'ru', name: 'Russia', flag: '\u{1F1F7}\u{1F1FA}' },
+      { code: 'sa', name: 'Saudi Arabia', flag: '\u{1F1F8}\u{1F1E6}' },
+      { code: 'gb-sct', name: 'Scotland', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}' },
+      { code: 'sn', name: 'Senegal', flag: '\u{1F1F8}\u{1F1F3}' },
+      { code: 'rs', name: 'Serbia', flag: '\u{1F1F7}\u{1F1F8}' },
+      { code: 'sg', name: 'Singapore', flag: '\u{1F1F8}\u{1F1EC}' },
+      { code: 'sk', name: 'Slovakia', flag: '\u{1F1F8}\u{1F1F0}' },
+      { code: 'si', name: 'Slovenia', flag: '\u{1F1F8}\u{1F1EE}' },
+      { code: 'za', name: 'South Africa', flag: '\u{1F1FF}\u{1F1E6}' },
+      { code: 'es', name: 'Spain', flag: '\u{1F1EA}\u{1F1F8}' },
+      { code: 'se', name: 'Sweden', flag: '\u{1F1F8}\u{1F1EA}' },
+      { code: 'ch', name: 'Switzerland', flag: '\u{1F1E8}\u{1F1ED}' },
+      { code: 'th', name: 'Thailand', flag: '\u{1F1F9}\u{1F1ED}' },
+      { code: 'tn', name: 'Tunisia', flag: '\u{1F1F9}\u{1F1F3}' },
+      { code: 'tr', name: 'Turkey', flag: '\u{1F1F9}\u{1F1F7}' },
+      { code: 'ua', name: 'Ukraine', flag: '\u{1F1FA}\u{1F1E6}' },
+      { code: 'ae', name: 'United Arab Emirates', flag: '\u{1F1E6}\u{1F1EA}' },
+      { code: 'gb', name: 'United Kingdom', flag: '\u{1F1EC}\u{1F1E7}' },
+      { code: 'us', name: 'United States', flag: '\u{1F1FA}\u{1F1F8}' },
+      { code: 'uy', name: 'Uruguay', flag: '\u{1F1FA}\u{1F1FE}' },
+      { code: 've', name: 'Venezuela', flag: '\u{1F1FB}\u{1F1EA}' },
+      { code: 'vn', name: 'Vietnam', flag: '\u{1F1FB}\u{1F1F3}' },
+      { code: 'gb-wls', name: 'Wales', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}' },
+    ];
+
+    const statsConfig = isGoalkeeper
+      ? [
+          { name: 'diving', label: 'DIV - Diving', description: 'Shot stopping ability' },
+          { name: 'handling', label: 'HAN - Handling', description: 'Ball control and catching' },
+          { name: 'kicking', label: 'KIC - Kicking', description: 'Distribution with feet' },
+          { name: 'reflexes', label: 'REF - Reflexes', description: 'Reaction speed' },
+          { name: 'speed', label: 'SPD - Speed', description: 'Movement speed' },
+          { name: 'positioning', label: 'POS - Positioning', description: 'Tactical positioning' },
+        ]
+      : [
+          { name: 'pace', label: 'PAC - Pace', description: 'Sprint speed and acceleration' },
+          { name: 'shooting', label: 'SHO - Shooting', description: 'Finishing and shot power' },
+          { name: 'passing', label: 'PAS - Passing', description: 'Vision and passing accuracy' },
+          { name: 'dribbling', label: 'DRI - Dribbling', description: 'Ball control and agility' },
+          { name: 'defending', label: 'DEF - Defending', description: 'Tackling and interceptions' },
+          { name: 'physical', label: 'PHY - Physical', description: 'Strength and stamina' },
+        ];
+
+    const currentStats = isGoalkeeper
+      ? {
+          diving: formData.stats.diving || 70,
+          handling: formData.stats.handling || 70,
+          kicking: formData.stats.kicking || 70,
+          reflexes: formData.stats.reflexes || 70,
+          speed: formData.stats.speed || 60,
+          positioning: formData.stats.positioning || 70,
+        }
+      : formData.stats;
+
+    return (
+      <div className="min-h-screen bg-surface-dark pb-20">
+        {/* Header */}
+        <div className="bg-gradient-to-b from-accent-gold/10 to-transparent">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-4">
+            <motion.div
+              className="text-center"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <h1 className="text-4xl font-display font-bold text-white uppercase tracking-wider">
+                Complete Your Profile
+              </h1>
+              <p className="text-white/60 mt-2">
+                Set up your player card to get started
+              </p>
+            </motion.div>
+          </div>
+        </div>
+
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-6">
+          {/* Step Indicator */}
+          {this.renderStepIndicator()}
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left Column - Live FIFA Card Preview */}
+            <div className="lg:col-span-4">
+              <motion.div
+                className="sticky top-8"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+              >
+                <h3 className="text-lg font-display font-bold text-white uppercase tracking-wider mb-4 text-center">
+                  Live Preview
+                </h3>
+                <div className="flex justify-center">
+                  <PlayerFIFACard
+                    name={formData.name}
+                    position={formData.position}
+                    alternate_positions={formData.alternatePositions}
+                    number={parseInt(formData.number) || 10}
+                    country={formData.country}
+                    image={formData.profilePhoto}
+                    stats={currentStats}
+                    skill_moves={formData.skillMoves}
+                    weak_foot={formData.weakFoot}
+                  />
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Right Column - Step Content */}
+            <div className="lg:col-span-8 space-y-8">
+              {/* Step 1: Photo + Name + Country */}
+              {setupStep === 1 && (
+                <motion.div
+                  className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="px-6 py-4 border-b border-accent-gold/20">
+                    <h3 className="text-xl font-display font-bold text-white uppercase tracking-wider">
+                      Basic Information
+                    </h3>
+                    <p className="text-white/50 text-sm mt-1">
+                      Upload your photo and set your display name
+                    </p>
+                  </div>
+                  <div className="p-6 space-y-6">
+                    {/* Profile Photo */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-3">Profile Photo</label>
+                      <div className="flex items-center gap-6">
+                        <div className="w-20 h-20 rounded-full bg-surface-dark border-2 border-accent-gold/30 overflow-hidden flex items-center justify-center">
+                          {formData.profilePhoto ? (
+                            <img
+                              src={formData.profilePhoto}
+                              alt="Profile"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <svg className="w-10 h-10 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg cursor-pointer transition-colors">
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Upload Photo
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={this.handlePhotoUpload}
+                              className="hidden"
+                            />
+                          </label>
+                          <p className="text-white/40 text-xs mt-2">JPG, PNG or GIF. Max 5MB</p>
+                          {errors.photo && (
+                            <p className="text-red-400 text-sm mt-1">{errors.photo}</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Name */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Display Name *</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={formData.name}
+                        onChange={this.handleInputChange}
+                        className={`w-full px-4 py-3 bg-surface-dark border rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold transition-colors ${
+                          errors.name ? 'border-red-500' : 'border-white/20'
+                        }`}
+                        placeholder="Enter your name"
+                      />
+                      {errors.name && (
+                        <p className="text-red-400 text-sm mt-1">{errors.name}</p>
+                      )}
+                    </div>
+
+                    {/* Country */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Country</label>
+                      <select
+                        name="country"
+                        value={formData.country}
+                        onChange={this.handleInputChange}
+                        className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors appearance-none cursor-pointer"
+                      >
+                        {countries.map((country) => (
+                          <option key={country.code} value={country.code}>
+                            {country.flag} {country.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 2: Position + Jersey Number + Preferred Foot + Height + Weight */}
+              {setupStep === 2 && (
+                <motion.div
+                  className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="px-6 py-4 border-b border-accent-gold/20">
+                    <h3 className="text-xl font-display font-bold text-white uppercase tracking-wider">
+                      Player Details
+                    </h3>
+                    <p className="text-white/50 text-sm mt-1">
+                      Tell us about your playing style
+                    </p>
+                  </div>
+                  <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {/* Position */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Position</label>
+                      <select
+                        name="position"
+                        value={formData.position}
+                        onChange={this.handleInputChange}
+                        className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors appearance-none cursor-pointer"
+                      >
+                        {positions.map((pos) => (
+                          <option key={pos} value={pos}>{pos}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Jersey Number */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Jersey Number</label>
+                      <input
+                        type="number"
+                        name="number"
+                        min="1"
+                        max="99"
+                        value={formData.number}
+                        onChange={this.handleInputChange}
+                        className={`w-full px-4 py-3 bg-surface-dark border rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors ${
+                          errors.number ? 'border-red-500' : 'border-white/20'
+                        }`}
+                      />
+                      {errors.number && (
+                        <p className="text-red-400 text-sm mt-1">{errors.number}</p>
+                      )}
+                    </div>
+
+                    {/* Preferred Foot */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Preferred Foot</label>
+                      <select
+                        name="preferredFoot"
+                        value={formData.preferredFoot}
+                        onChange={this.handleInputChange}
+                        className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors appearance-none cursor-pointer"
+                      >
+                        <option value="Right">Right</option>
+                        <option value="Left">Left</option>
+                        <option value="Both">Both</option>
+                      </select>
+                    </div>
+
+                    {/* Height */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Height (cm)</label>
+                      <input
+                        type="number"
+                        name="height"
+                        value={formData.height}
+                        onChange={this.handleInputChange}
+                        className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors"
+                        placeholder="175"
+                      />
+                    </div>
+
+                    {/* Weight */}
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Weight (kg)</label>
+                      <input
+                        type="number"
+                        name="weight"
+                        value={formData.weight}
+                        onChange={this.handleInputChange}
+                        className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors"
+                        placeholder="70"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Step 3: Self-Rated Stats */}
+              {setupStep === 3 && (
+                <motion.div
+                  className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <div className="px-6 py-4 border-b border-accent-gold/20">
+                    <h3 className="text-xl font-display font-bold text-white uppercase tracking-wider">
+                      Self-Rated Stats
+                    </h3>
+                    <p className="text-white/50 text-sm mt-1">
+                      Rate your own abilities (1-99). Be honest - your coach may adjust these!
+                    </p>
+                  </div>
+                  <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {statsConfig.map((stat, index) => (
+                      <motion.div
+                        key={stat.name}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 + index * 0.05 }}
+                      >
+                        <StatSlider
+                          name={stat.name}
+                          label={stat.label}
+                          description={stat.description}
+                          value={currentStats[stat.name] || 50}
+                          onChange={this.handleStatChange}
+                        />
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Error display */}
+              {errors.submit && (
+                <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <p className="text-red-400 text-sm">{errors.submit}</p>
+                </div>
+              )}
+
+              {/* Navigation Buttons */}
+              <div className="flex items-center justify-between pt-4">
+                {setupStep > 1 ? (
+                  <motion.button
+                    type="button"
+                    onClick={this.handleSetupBack}
+                    className="px-6 py-3 border border-white/20 text-white font-medium rounded-lg hover:bg-white/5 transition-colors flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                    Back
+                  </motion.button>
+                ) : (
+                  <div />
+                )}
+
+                {setupStep < 3 ? (
+                  <motion.button
+                    type="button"
+                    onClick={this.handleSetupNext}
+                    className="px-6 py-3 bg-accent-gold text-black font-bold rounded-lg hover:bg-accent-gold-light transition-colors flex items-center gap-2"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Next
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </motion.button>
+                ) : (
+                  <motion.button
+                    type="button"
+                    onClick={this.handleSetupComplete}
+                    disabled={isSaving}
+                    className="px-8 py-3 bg-accent-gold text-black font-bold rounded-lg hover:bg-accent-gold-light transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    whileHover={!isSaving ? { scale: 1.02 } : {}}
+                    whileTap={!isSaving ? { scale: 0.98 } : {}}
+                  >
+                    {isSaving ? (
+                      <>
+                        <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        Complete Profile
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </>
+                    )}
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   render() {
-    const { isLoading, isSaving, hasChanges, formData, errors, redirectToProfile } = this.state;
+    const { isLoading, isSaving, hasChanges, formData, errors, redirectToProfile, isSetup } = this.state;
 
     if (redirectToProfile) {
       return <Navigate to="/profile" replace />;
@@ -422,87 +1027,93 @@ class ProfileEdit extends Component {
       return this.renderLoadingState();
     }
 
+    // Setup wizard mode
+    if (isSetup) {
+      return this.renderSetupWizard();
+    }
+
+    // Normal edit mode (unchanged from original)
     const positions = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
     const isGoalkeeper = formData.position === 'GK';
 
     const countries = [
-      { code: 'af', name: 'Afghanistan', flag: '🇦🇫' },
-      { code: 'al', name: 'Albania', flag: '🇦🇱' },
-      { code: 'dz', name: 'Algeria', flag: '🇩🇿' },
-      { code: 'ar', name: 'Argentina', flag: '🇦🇷' },
-      { code: 'au', name: 'Australia', flag: '🇦🇺' },
-      { code: 'at', name: 'Austria', flag: '🇦🇹' },
-      { code: 'be', name: 'Belgium', flag: '🇧🇪' },
-      { code: 'br', name: 'Brazil', flag: '🇧🇷' },
-      { code: 'bg', name: 'Bulgaria', flag: '🇧🇬' },
-      { code: 'cm', name: 'Cameroon', flag: '🇨🇲' },
-      { code: 'ca', name: 'Canada', flag: '🇨🇦' },
-      { code: 'cl', name: 'Chile', flag: '🇨🇱' },
-      { code: 'cn', name: 'China', flag: '🇨🇳' },
-      { code: 'co', name: 'Colombia', flag: '🇨🇴' },
-      { code: 'cr', name: 'Costa Rica', flag: '🇨🇷' },
-      { code: 'hr', name: 'Croatia', flag: '🇭🇷' },
-      { code: 'cz', name: 'Czech Republic', flag: '🇨🇿' },
-      { code: 'dk', name: 'Denmark', flag: '🇩🇰' },
-      { code: 'ec', name: 'Ecuador', flag: '🇪🇨' },
-      { code: 'eg', name: 'Egypt', flag: '🇪🇬' },
-      { code: 'gb-eng', name: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-      { code: 'fi', name: 'Finland', flag: '🇫🇮' },
-      { code: 'fr', name: 'France', flag: '🇫🇷' },
-      { code: 'de', name: 'Germany', flag: '🇩🇪' },
-      { code: 'gh', name: 'Ghana', flag: '🇬🇭' },
-      { code: 'gr', name: 'Greece', flag: '🇬🇷' },
-      { code: 'hu', name: 'Hungary', flag: '🇭🇺' },
-      { code: 'is', name: 'Iceland', flag: '🇮🇸' },
-      { code: 'in', name: 'India', flag: '🇮🇳' },
-      { code: 'id', name: 'Indonesia', flag: '🇮🇩' },
-      { code: 'ir', name: 'Iran', flag: '🇮🇷' },
-      { code: 'ie', name: 'Ireland', flag: '🇮🇪' },
-      { code: 'il', name: 'Israel', flag: '🇮🇱' },
-      { code: 'it', name: 'Italy', flag: '🇮🇹' },
-      { code: 'ci', name: 'Ivory Coast', flag: '🇨🇮' },
-      { code: 'jp', name: 'Japan', flag: '🇯🇵' },
-      { code: 'ke', name: 'Kenya', flag: '🇰🇪' },
-      { code: 'kr', name: 'South Korea', flag: '🇰🇷' },
-      { code: 'my', name: 'Malaysia', flag: '🇲🇾' },
-      { code: 'mx', name: 'Mexico', flag: '🇲🇽' },
-      { code: 'ma', name: 'Morocco', flag: '🇲🇦' },
-      { code: 'nl', name: 'Netherlands', flag: '🇳🇱' },
-      { code: 'nz', name: 'New Zealand', flag: '🇳🇿' },
-      { code: 'ng', name: 'Nigeria', flag: '🇳🇬' },
-      { code: 'no', name: 'Norway', flag: '🇳🇴' },
-      { code: 'pk', name: 'Pakistan', flag: '🇵🇰' },
-      { code: 'pa', name: 'Panama', flag: '🇵🇦' },
-      { code: 'py', name: 'Paraguay', flag: '🇵🇾' },
-      { code: 'pe', name: 'Peru', flag: '🇵🇪' },
-      { code: 'ph', name: 'Philippines', flag: '🇵🇭' },
-      { code: 'pl', name: 'Poland', flag: '🇵🇱' },
-      { code: 'pt', name: 'Portugal', flag: '🇵🇹' },
-      { code: 'qa', name: 'Qatar', flag: '🇶🇦' },
-      { code: 'ro', name: 'Romania', flag: '🇷🇴' },
-      { code: 'ru', name: 'Russia', flag: '🇷🇺' },
-      { code: 'sa', name: 'Saudi Arabia', flag: '🇸🇦' },
-      { code: 'gb-sct', name: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
-      { code: 'sn', name: 'Senegal', flag: '🇸🇳' },
-      { code: 'rs', name: 'Serbia', flag: '🇷🇸' },
-      { code: 'sg', name: 'Singapore', flag: '🇸🇬' },
-      { code: 'sk', name: 'Slovakia', flag: '🇸🇰' },
-      { code: 'si', name: 'Slovenia', flag: '🇸🇮' },
-      { code: 'za', name: 'South Africa', flag: '🇿🇦' },
-      { code: 'es', name: 'Spain', flag: '🇪🇸' },
-      { code: 'se', name: 'Sweden', flag: '🇸🇪' },
-      { code: 'ch', name: 'Switzerland', flag: '🇨🇭' },
-      { code: 'th', name: 'Thailand', flag: '🇹🇭' },
-      { code: 'tn', name: 'Tunisia', flag: '🇹🇳' },
-      { code: 'tr', name: 'Turkey', flag: '🇹🇷' },
-      { code: 'ua', name: 'Ukraine', flag: '🇺🇦' },
-      { code: 'ae', name: 'United Arab Emirates', flag: '🇦🇪' },
-      { code: 'gb', name: 'United Kingdom', flag: '🇬🇧' },
-      { code: 'us', name: 'United States', flag: '🇺🇸' },
-      { code: 'uy', name: 'Uruguay', flag: '🇺🇾' },
-      { code: 've', name: 'Venezuela', flag: '🇻🇪' },
-      { code: 'vn', name: 'Vietnam', flag: '🇻🇳' },
-      { code: 'gb-wls', name: 'Wales', flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿' },
+      { code: 'af', name: 'Afghanistan', flag: '\u{1F1E6}\u{1F1EB}' },
+      { code: 'al', name: 'Albania', flag: '\u{1F1E6}\u{1F1F1}' },
+      { code: 'dz', name: 'Algeria', flag: '\u{1F1E9}\u{1F1FF}' },
+      { code: 'ar', name: 'Argentina', flag: '\u{1F1E6}\u{1F1F7}' },
+      { code: 'au', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}' },
+      { code: 'at', name: 'Austria', flag: '\u{1F1E6}\u{1F1F9}' },
+      { code: 'be', name: 'Belgium', flag: '\u{1F1E7}\u{1F1EA}' },
+      { code: 'br', name: 'Brazil', flag: '\u{1F1E7}\u{1F1F7}' },
+      { code: 'bg', name: 'Bulgaria', flag: '\u{1F1E7}\u{1F1EC}' },
+      { code: 'cm', name: 'Cameroon', flag: '\u{1F1E8}\u{1F1F2}' },
+      { code: 'ca', name: 'Canada', flag: '\u{1F1E8}\u{1F1E6}' },
+      { code: 'cl', name: 'Chile', flag: '\u{1F1E8}\u{1F1F1}' },
+      { code: 'cn', name: 'China', flag: '\u{1F1E8}\u{1F1F3}' },
+      { code: 'co', name: 'Colombia', flag: '\u{1F1E8}\u{1F1F4}' },
+      { code: 'cr', name: 'Costa Rica', flag: '\u{1F1E8}\u{1F1F7}' },
+      { code: 'hr', name: 'Croatia', flag: '\u{1F1ED}\u{1F1F7}' },
+      { code: 'cz', name: 'Czech Republic', flag: '\u{1F1E8}\u{1F1FF}' },
+      { code: 'dk', name: 'Denmark', flag: '\u{1F1E9}\u{1F1F0}' },
+      { code: 'ec', name: 'Ecuador', flag: '\u{1F1EA}\u{1F1E8}' },
+      { code: 'eg', name: 'Egypt', flag: '\u{1F1EA}\u{1F1EC}' },
+      { code: 'gb-eng', name: 'England', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
+      { code: 'fi', name: 'Finland', flag: '\u{1F1EB}\u{1F1EE}' },
+      { code: 'fr', name: 'France', flag: '\u{1F1EB}\u{1F1F7}' },
+      { code: 'de', name: 'Germany', flag: '\u{1F1E9}\u{1F1EA}' },
+      { code: 'gh', name: 'Ghana', flag: '\u{1F1EC}\u{1F1ED}' },
+      { code: 'gr', name: 'Greece', flag: '\u{1F1EC}\u{1F1F7}' },
+      { code: 'hu', name: 'Hungary', flag: '\u{1F1ED}\u{1F1FA}' },
+      { code: 'is', name: 'Iceland', flag: '\u{1F1EE}\u{1F1F8}' },
+      { code: 'in', name: 'India', flag: '\u{1F1EE}\u{1F1F3}' },
+      { code: 'id', name: 'Indonesia', flag: '\u{1F1EE}\u{1F1E9}' },
+      { code: 'ir', name: 'Iran', flag: '\u{1F1EE}\u{1F1F7}' },
+      { code: 'ie', name: 'Ireland', flag: '\u{1F1EE}\u{1F1EA}' },
+      { code: 'il', name: 'Israel', flag: '\u{1F1EE}\u{1F1F1}' },
+      { code: 'it', name: 'Italy', flag: '\u{1F1EE}\u{1F1F9}' },
+      { code: 'ci', name: 'Ivory Coast', flag: '\u{1F1E8}\u{1F1EE}' },
+      { code: 'jp', name: 'Japan', flag: '\u{1F1EF}\u{1F1F5}' },
+      { code: 'ke', name: 'Kenya', flag: '\u{1F1F0}\u{1F1EA}' },
+      { code: 'kr', name: 'South Korea', flag: '\u{1F1F0}\u{1F1F7}' },
+      { code: 'my', name: 'Malaysia', flag: '\u{1F1F2}\u{1F1FE}' },
+      { code: 'mx', name: 'Mexico', flag: '\u{1F1F2}\u{1F1FD}' },
+      { code: 'ma', name: 'Morocco', flag: '\u{1F1F2}\u{1F1E6}' },
+      { code: 'nl', name: 'Netherlands', flag: '\u{1F1F3}\u{1F1F1}' },
+      { code: 'nz', name: 'New Zealand', flag: '\u{1F1F3}\u{1F1FF}' },
+      { code: 'ng', name: 'Nigeria', flag: '\u{1F1F3}\u{1F1EC}' },
+      { code: 'no', name: 'Norway', flag: '\u{1F1F3}\u{1F1F4}' },
+      { code: 'pk', name: 'Pakistan', flag: '\u{1F1F5}\u{1F1F0}' },
+      { code: 'pa', name: 'Panama', flag: '\u{1F1F5}\u{1F1E6}' },
+      { code: 'py', name: 'Paraguay', flag: '\u{1F1F5}\u{1F1FE}' },
+      { code: 'pe', name: 'Peru', flag: '\u{1F1F5}\u{1F1EA}' },
+      { code: 'ph', name: 'Philippines', flag: '\u{1F1F5}\u{1F1ED}' },
+      { code: 'pl', name: 'Poland', flag: '\u{1F1F5}\u{1F1F1}' },
+      { code: 'pt', name: 'Portugal', flag: '\u{1F1F5}\u{1F1F9}' },
+      { code: 'qa', name: 'Qatar', flag: '\u{1F1F6}\u{1F1E6}' },
+      { code: 'ro', name: 'Romania', flag: '\u{1F1F7}\u{1F1F4}' },
+      { code: 'ru', name: 'Russia', flag: '\u{1F1F7}\u{1F1FA}' },
+      { code: 'sa', name: 'Saudi Arabia', flag: '\u{1F1F8}\u{1F1E6}' },
+      { code: 'gb-sct', name: 'Scotland', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}' },
+      { code: 'sn', name: 'Senegal', flag: '\u{1F1F8}\u{1F1F3}' },
+      { code: 'rs', name: 'Serbia', flag: '\u{1F1F7}\u{1F1F8}' },
+      { code: 'sg', name: 'Singapore', flag: '\u{1F1F8}\u{1F1EC}' },
+      { code: 'sk', name: 'Slovakia', flag: '\u{1F1F8}\u{1F1F0}' },
+      { code: 'si', name: 'Slovenia', flag: '\u{1F1F8}\u{1F1EE}' },
+      { code: 'za', name: 'South Africa', flag: '\u{1F1FF}\u{1F1E6}' },
+      { code: 'es', name: 'Spain', flag: '\u{1F1EA}\u{1F1F8}' },
+      { code: 'se', name: 'Sweden', flag: '\u{1F1F8}\u{1F1EA}' },
+      { code: 'ch', name: 'Switzerland', flag: '\u{1F1E8}\u{1F1ED}' },
+      { code: 'th', name: 'Thailand', flag: '\u{1F1F9}\u{1F1ED}' },
+      { code: 'tn', name: 'Tunisia', flag: '\u{1F1F9}\u{1F1F3}' },
+      { code: 'tr', name: 'Turkey', flag: '\u{1F1F9}\u{1F1F7}' },
+      { code: 'ua', name: 'Ukraine', flag: '\u{1F1FA}\u{1F1E6}' },
+      { code: 'ae', name: 'United Arab Emirates', flag: '\u{1F1E6}\u{1F1EA}' },
+      { code: 'gb', name: 'United Kingdom', flag: '\u{1F1EC}\u{1F1E7}' },
+      { code: 'us', name: 'United States', flag: '\u{1F1FA}\u{1F1F8}' },
+      { code: 'uy', name: 'Uruguay', flag: '\u{1F1FA}\u{1F1FE}' },
+      { code: 've', name: 'Venezuela', flag: '\u{1F1FB}\u{1F1EA}' },
+      { code: 'vn', name: 'Vietnam', flag: '\u{1F1FB}\u{1F1F3}' },
+      { code: 'gb-wls', name: 'Wales', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}' },
     ];
 
     // Stats configuration based on position

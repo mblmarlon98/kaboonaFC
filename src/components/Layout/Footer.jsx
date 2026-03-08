@@ -35,12 +35,10 @@ class Footer extends Component {
             {/* Logo & Tagline */}
             <div className="col-span-2 md:col-span-1">
               <Link to="/" className="inline-block">
-                <span className="text-2xl font-display font-bold text-accent-gold tracking-wider">
-                  KABOONA
-                </span>
+                <img src="/kaboona-logo.png" alt="Kaboona FC" className="h-16 w-auto" />
               </Link>
               <p className="mt-3 text-sm text-white/60">
-                Pride of Sunway University
+                Kaboona Football Club
               </p>
             </div>
 

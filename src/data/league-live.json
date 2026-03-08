@@ -1,0 +1,434 @@
+{
+  "lastUpdated": "2026-03-08T08:00:43.523Z",
+  "source": "https://agdsports.com/tournament/the-new-camp-edition-division-3/",
+  "competition": "The New Camp Edition (Division 3)",
+  "standings": [
+    {
+      "position": 1,
+      "team": "SIU FC",
+      "played": 6,
+      "won": 6,
+      "drawn": 0,
+      "lost": 0,
+      "goalsFor": 23,
+      "goalsAgainst": 6,
+      "gd": 17,
+      "points": 18,
+      "isKaboona": false
+    },
+    {
+      "position": 2,
+      "team": "CIC X RA RAPTOR FC",
+      "played": 6,
+      "won": 3,
+      "drawn": 1,
+      "lost": 2,
+      "goalsFor": 17,
+      "goalsAgainst": 11,
+      "gd": 6,
+      "points": 10,
+      "isKaboona": false
+    },
+    {
+      "position": 3,
+      "team": "Menjalara city FC",
+      "played": 4,
+      "won": 3,
+      "drawn": 0,
+      "lost": 1,
+      "goalsFor": 13,
+      "goalsAgainst": 8,
+      "gd": 5,
+      "points": 9,
+      "isKaboona": false
+    },
+    {
+      "position": 4,
+      "team": "Kaboona FC",
+      "played": 5,
+      "won": 3,
+      "drawn": 0,
+      "lost": 2,
+      "goalsFor": 11,
+      "goalsAgainst": 8,
+      "gd": 3,
+      "points": 9,
+      "isKaboona": true
+    },
+    {
+      "position": 5,
+      "team": "Susu XI",
+      "played": 6,
+      "won": 3,
+      "drawn": 0,
+      "lost": 3,
+      "goalsFor": 13,
+      "goalsAgainst": 18,
+      "gd": -5,
+      "points": 9,
+      "isKaboona": false
+    },
+    {
+      "position": 6,
+      "team": "Kelbros FC",
+      "played": 5,
+      "won": 2,
+      "drawn": 1,
+      "lost": 2,
+      "goalsFor": 9,
+      "goalsAgainst": 9,
+      "gd": 0,
+      "points": 7,
+      "isKaboona": false
+    },
+    {
+      "position": 7,
+      "team": "BBNU FC B",
+      "played": 6,
+      "won": 2,
+      "drawn": 0,
+      "lost": 4,
+      "goalsFor": 14,
+      "goalsAgainst": 16,
+      "gd": -2,
+      "points": 6,
+      "isKaboona": false
+    },
+    {
+      "position": 8,
+      "team": "Scarecrow Fc",
+      "played": 4,
+      "won": 0,
+      "drawn": 0,
+      "lost": 4,
+      "goalsFor": 4,
+      "goalsAgainst": 12,
+      "gd": -8,
+      "points": 0,
+      "isKaboona": false
+    },
+    {
+      "position": 9,
+      "team": "Ampang Rangers",
+      "played": 4,
+      "won": 0,
+      "drawn": 0,
+      "lost": 4,
+      "goalsFor": 5,
+      "goalsAgainst": 21,
+      "gd": -16,
+      "points": 0,
+      "isKaboona": false
+    }
+  ],
+  "kaboonaMatches": [
+    {
+      "date": "13 Feb",
+      "opponent": "BBNU FC B",
+      "score": "3-0",
+      "goalsFor": 3,
+      "goalsAgainst": 0,
+      "result": "W",
+      "type": "league",
+      "competition": "The New Camp Edition (Division 3)"
+    },
+    {
+      "date": "06 Feb",
+      "opponent": "Kelbros FC",
+      "score": "3-1",
+      "goalsFor": 3,
+      "goalsAgainst": 1,
+      "result": "W",
+      "type": "league",
+      "competition": "The New Camp Edition (Division 3)"
+    },
+    {
+      "date": "30 Jan",
+      "opponent": "SIU FC",
+      "score": "1-3",
+      "goalsFor": 1,
+      "goalsAgainst": 3,
+      "result": "L",
+      "type": "league",
+      "competition": "The New Camp Edition (Division 3)"
+    },
+    {
+      "date": "23 Jan",
+      "opponent": "Scarecrow Fc",
+      "score": "3-2",
+      "goalsFor": 3,
+      "goalsAgainst": 2,
+      "result": "W",
+      "type": "league",
+      "competition": "The New Camp Edition (Division 3)"
+    },
+    {
+      "date": "16 Jan",
+      "opponent": "CIC X RA RAPTOR FC",
+      "score": "1-2",
+      "goalsFor": 1,
+      "goalsAgainst": 2,
+      "result": "L",
+      "type": "league",
+      "competition": "The New Camp Edition (Division 3)"
+    }
+  ],
+  "kaboonaSquad": [
+    {
+      "name": "Aabid Anas Atta",
+      "position": "FWD",
+      "age": 22,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Akasha Hamid",
+      "position": "DEF",
+      "age": 19,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Akot Arech Lual",
+      "position": "MID",
+      "age": 23,
+      "goals": 1,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Alexander",
+      "position": "DEF",
+      "age": 21,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Alvin Buwule",
+      "position": "MID",
+      "age": 21,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Amirul Azhar",
+      "position": "GK",
+      "age": 21,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Andrew Ian",
+      "position": "FWD",
+      "age": 23,
+      "goals": 6,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Austiun Arnold",
+      "position": "FWD",
+      "age": 22,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Aymyrat",
+      "position": "FWD",
+      "age": 21,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Benjamin Rukundo Bitature",
+      "position": "FWD",
+      "age": 23,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Effort Shirichena",
+      "position": "DEF",
+      "age": 27,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Eziz",
+      "position": "FWD",
+      "age": 19,
+      "goals": 1,
+      "assists": 1,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Fahim Shaaban",
+      "position": "DEF",
+      "age": 20,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Isaac Otong Biel",
+      "position": "MID",
+      "age": 23,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Joshua Chigozie",
+      "position": "DEF",
+      "age": 27,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "keitaro Chitedze",
+      "position": "GK",
+      "age": 21,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Mansour",
+      "position": "DEF",
+      "age": 19,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Marlon",
+      "position": "GK",
+      "age": 27,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Obed Comfort Jnr Tlhagwane",
+      "position": "FWD",
+      "age": 24,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Oladapo Oluwasegun Johnson",
+      "position": "DEF",
+      "age": 24,
+      "goals": 1,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Patucho",
+      "position": "FWD",
+      "age": 19,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Ramez Ashraf Kamel Ahmed",
+      "position": "DEF",
+      "age": 21,
+      "goals": 1,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Tyler",
+      "position": "MID",
+      "age": 20,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Wayne",
+      "position": "FWD",
+      "age": 19,
+      "goals": 1,
+      "assists": 1,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Yaser",
+      "position": "GK",
+      "age": 27,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Yassin Abdelrahman",
+      "position": "FWD",
+      "age": 20,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Youssef Hamza",
+      "position": "FWD",
+      "age": 20,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    }
+  ],
+  "kaboonaStats": {
+    "position": 4,
+    "team": "Kaboona FC",
+    "played": 5,
+    "won": 3,
+    "drawn": 0,
+    "lost": 2,
+    "goalsFor": 11,
+    "goalsAgainst": 8,
+    "gd": 3,
+    "points": 9,
+    "isKaboona": true
+  }
+}

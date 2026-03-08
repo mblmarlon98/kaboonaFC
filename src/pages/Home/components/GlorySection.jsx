@@ -4,6 +4,9 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import supabase from '../../../services/supabase';
 import { PlayerFIFACard } from '../../../components/shared';
+import { ALL_MATCHES, OVERALL_STATS, THIRD_DIV_LEAGUE_TABLE, TOURNAMENTS } from '../../../data/matches';
+import liveData from '../../../data/league-live.json';
+import { TeamLogo } from '../../../data/teamLogos';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -76,14 +79,11 @@ class GlorySection extends Component {
         console.warn('League table not available:', leagueError);
       }
 
-      // Mock data - in production these would come from database
-      const mockLeagueTable = [
-        { position: 1, team: 'Tigers FC', played: 10, won: 8, drawn: 1, lost: 1, gd: 15, points: 25 },
-        { position: 2, team: 'Sunway United', played: 10, won: 7, drawn: 2, lost: 1, gd: 12, points: 23 },
-        { position: 3, team: 'KABOONA FC', played: 10, won: 6, drawn: 3, lost: 1, gd: 10, points: 21, isKaboona: true },
-        { position: 4, team: 'Phoenix Stars', played: 10, won: 5, drawn: 2, lost: 3, gd: 5, points: 17 },
-        { position: 5, team: 'Warriors SC', played: 10, won: 4, drawn: 3, lost: 3, gd: 2, points: 15 },
-      ];
+      // Use live scraped data if available, fallback to static
+      const liveStandings = liveData?.standings?.length > 0
+        ? liveData.standings.map(t => ({ ...t, isKaboona: t.isKaboona || t.team?.toLowerCase().includes('kaboona') }))
+        : null;
+      const realLeagueTable = liveStandings || THIRD_DIV_LEAGUE_TABLE;
 
       const mockTopScorers = [
         {
@@ -168,7 +168,7 @@ class GlorySection extends Component {
       ];
 
       this.setState({
-        leagueTable: leagueData || mockLeagueTable,
+        leagueTable: (leagueData && leagueData.length > 0) ? leagueData : realLeagueTable,
         topScorers: mockTopScorers,
         cleanSheets: mockCleanSheets,
         mostAttendance: mockMostAttendance,
@@ -217,7 +217,12 @@ class GlorySection extends Component {
                 }`}
               >
                 <td className="py-3 px-2">{team.position}</td>
-                <td className="py-3 px-2 whitespace-nowrap">{team.team}</td>
+                <td className="py-3 px-2 whitespace-nowrap">
+                  <div className="flex items-center gap-2">
+                    <TeamLogo teamName={team.team} size={22} />
+                    {team.team}
+                  </div>
+                </td>
                 <td className="py-3 px-2 text-center">{team.played}</td>
                 <td className="py-3 px-2 text-center">{team.gd > 0 ? `+${team.gd}` : team.gd}</td>
                 <td className="py-3 px-2 text-center font-bold">{team.points}</td>
@@ -298,7 +303,7 @@ class GlorySection extends Component {
                   <svg className="w-6 h-6 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                   </svg>
-                  League Table
+                  The New Camp Edition (Division 3)
                 </h3>
                 {this.renderLeagueTable()}
               </div>

@@ -9,7 +9,7 @@ const mockContentSections = [
     fields: [
       { key: 'title', label: 'Title', type: 'text', value: 'Rise to Glory' },
       { key: 'subtitle', label: 'Subtitle', type: 'text', value: 'Join the Movement' },
-      { key: 'description', label: 'Description', type: 'textarea', value: 'Experience elite football training at Sunway University with Kaboona FC.' },
+      { key: 'description', label: 'Description', type: 'textarea', value: 'Experience elite football training with Kaboona FC.' },
       { key: 'ctaText', label: 'CTA Button Text', type: 'text', value: 'Join Now' },
     ],
   },
@@ -18,7 +18,7 @@ const mockContentSections = [
     name: 'About Section',
     fields: [
       { key: 'title', label: 'Title', type: 'text', value: 'About Kaboona FC' },
-      { key: 'description', label: 'Description', type: 'textarea', value: 'Founded with a passion for football excellence, Kaboona FC brings together talented players from across Sunway University.' },
+      { key: 'description', label: 'Description', type: 'textarea', value: 'Founded with a passion for football excellence, Kaboona FC brings together talented players from across the community.' },
       { key: 'mission', label: 'Mission Statement', type: 'textarea', value: 'To develop world-class football talent and foster a community of dedicated athletes.' },
     ],
   },

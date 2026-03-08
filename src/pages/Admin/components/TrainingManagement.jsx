@@ -8,7 +8,7 @@ const mockSessions = [
     name: 'Morning Training',
     date: '2024-02-15',
     time: '07:00 - 09:00',
-    location: 'Sunway Stadium',
+    location: 'Kaboona Stadium',
     coach: 'Coach Ahmad',
     capacity: 25,
     registered: 22,
@@ -19,7 +19,7 @@ const mockSessions = [
     name: 'Evening Session',
     date: '2024-02-15',
     time: '18:00 - 20:00',
-    location: 'Sunway Stadium',
+    location: 'Kaboona Stadium',
     coach: 'Sarah Wong',
     capacity: 20,
     registered: 20,
@@ -615,7 +615,7 @@ class TrainingManagement extends Component {
                     type="text"
                     value={sessionForm.location}
                     onChange={(e) => this.handleSessionFormChange('location', e.target.value)}
-                    placeholder="e.g., Sunway Stadium"
+                    placeholder="e.g., Kaboona Stadium"
                     className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold"
                   />
                 </div>

@@ -1,38 +1,123 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
-
-// Mock players data
-const mockPlayers = [
-  { id: 1, name: 'Ahmad Rahman', email: 'ahmad@email.com', position: 'ST', status: 'active', subscription: 'Pro', joinDate: '2024-01-15', attendance: 95 },
-  { id: 2, name: 'Sarah Lee', email: 'sarah@email.com', position: 'CM', status: 'active', subscription: 'Elite', joinDate: '2023-11-20', attendance: 88 },
-  { id: 3, name: 'John Smith', email: 'john@email.com', position: 'CB', status: 'pending', subscription: 'Basic', joinDate: '2024-02-01', attendance: 0 },
-  { id: 4, name: 'Maria Garcia', email: 'maria@email.com', position: 'GK', status: 'active', subscription: 'Pro', joinDate: '2023-09-10', attendance: 92 },
-  { id: 5, name: 'Wei Chen', email: 'wei@email.com', position: 'RW', status: 'active', subscription: 'Basic', joinDate: '2024-01-05', attendance: 78 },
-  { id: 6, name: 'James Wilson', email: 'james@email.com', position: 'LB', status: 'inactive', subscription: 'Pro', joinDate: '2023-06-15', attendance: 45 },
-  { id: 7, name: 'Priya Patel', email: 'priya@email.com', position: 'CAM', status: 'pending', subscription: 'Elite', joinDate: '2024-02-10', attendance: 0 },
-  { id: 8, name: 'Michael Brown', email: 'michael@email.com', position: 'CDM', status: 'active', subscription: 'Pro', joinDate: '2023-08-22', attendance: 85 },
-];
+import { supabase } from '../../../services/supabase';
+import { createNotification } from '../../../services/notificationService';
 
 /**
  * Players Management Component
  * Table with all players, search, filters, and edit/delete actions
+ * Fetches real data from Supabase (players + profiles)
  */
 class PlayersManagement extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      players: mockPlayers,
-      filteredPlayers: mockPlayers,
+      players: [],
+      filteredPlayers: [],
+      isLoading: true,
       searchTerm: '',
       statusFilter: 'all',
-      subscriptionFilter: 'all',
       sortBy: 'name',
       sortOrder: 'asc',
       selectedPlayer: null,
       showModal: false,
       modalType: null,
+      actionLoading: null,
     };
   }
+
+  componentDidMount() {
+    this.fetchPlayers();
+  }
+
+  fetchPlayers = async () => {
+    this.setState({ isLoading: true });
+
+    try {
+      // Fetch profiles with role 'player' or profiles that have a player record
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, full_name, role, created_at')
+        .in('role', ['player', 'pending']);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Fetch all player records
+      const { data: playerRecords, error: playersError } = await supabase
+        .from('players')
+        .select('*');
+
+      if (playersError) {
+        console.error('Error fetching players:', playersError);
+      }
+
+      // Also fetch profiles that have player records but may not have role='player'
+      const playerUserIds = (playerRecords || []).map(p => p.user_id).filter(Boolean);
+
+      let additionalProfiles = [];
+      if (playerUserIds.length > 0) {
+        const { data: extraProfiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, role, created_at')
+          .in('id', playerUserIds);
+        additionalProfiles = extraProfiles || [];
+      }
+
+      // Merge profiles - combine both queries, deduplicate by id
+      const allProfilesMap = {};
+      [...(profiles || []), ...additionalProfiles].forEach(p => {
+        allProfilesMap[p.id] = p;
+      });
+      const allProfiles = Object.values(allProfilesMap);
+
+      // Build player records map by user_id
+      const playerMap = {};
+      (playerRecords || []).forEach(p => {
+        if (p.user_id) {
+          playerMap[p.user_id] = p;
+        }
+      });
+
+      // Fetch auth users' emails via profiles (we'll use Supabase auth admin or just show profile data)
+      // Since we can't access auth.users from client, we'll use the profile data
+      // Try to get emails from auth metadata if available
+      const combinedPlayers = allProfiles.map(profile => {
+        const player = playerMap[profile.id];
+
+        // Determine status
+        let status;
+        if (!player) {
+          status = 'pending';
+        } else if (player.is_retired) {
+          status = 'inactive';
+        } else {
+          status = 'active';
+        }
+
+        return {
+          id: profile.id,
+          playerId: player?.id || null,
+          name: player?.name || profile.full_name || 'Unknown',
+          email: player?.email || '',
+          position: player?.position || '-',
+          status,
+          joinDate: profile.created_at,
+          profileRole: profile.role,
+        };
+      });
+
+      this.setState({
+        players: combinedPlayers,
+        filteredPlayers: combinedPlayers,
+        isLoading: false,
+      }, this.filterPlayers);
+    } catch (error) {
+      console.error('Error fetching players:', error);
+      this.setState({ isLoading: false });
+    }
+  };
 
   handleSearch = (e) => {
     const searchTerm = e.target.value;
@@ -43,10 +128,6 @@ class PlayersManagement extends Component {
     this.setState({ statusFilter: e.target.value }, this.filterPlayers);
   };
 
-  handleSubscriptionFilter = (e) => {
-    this.setState({ subscriptionFilter: e.target.value }, this.filterPlayers);
-  };
-
   handleSort = (field) => {
     this.setState((prevState) => ({
       sortBy: field,
@@ -55,16 +136,15 @@ class PlayersManagement extends Component {
   };
 
   filterPlayers = () => {
-    const { players, searchTerm, statusFilter, subscriptionFilter, sortBy, sortOrder } = this.state;
+    const { players, searchTerm, statusFilter, sortBy, sortOrder } = this.state;
 
     let filtered = players.filter((player) => {
       const matchesSearch =
         player.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        player.email.toLowerCase().includes(searchTerm.toLowerCase());
+        (player.email && player.email.toLowerCase().includes(searchTerm.toLowerCase()));
       const matchesStatus = statusFilter === 'all' || player.status === statusFilter;
-      const matchesSubscription = subscriptionFilter === 'all' || player.subscription === subscriptionFilter;
 
-      return matchesSearch && matchesStatus && matchesSubscription;
+      return matchesSearch && matchesStatus;
     });
 
     // Sort
@@ -74,7 +154,7 @@ class PlayersManagement extends Component {
 
       if (typeof aVal === 'string') {
         aVal = aVal.toLowerCase();
-        bVal = bVal.toLowerCase();
+        bVal = (bVal || '').toLowerCase();
       }
 
       if (sortOrder === 'asc') {
@@ -94,19 +174,77 @@ class PlayersManagement extends Component {
     this.setState({ showModal: false, modalType: null, selectedPlayer: null });
   };
 
-  handleApprove = (playerId) => {
-    this.setState((prevState) => ({
-      players: prevState.players.map((p) =>
-        p.id === playerId ? { ...p, status: 'active' } : p
-      ),
-    }), this.filterPlayers);
+  handleApprove = async (player) => {
+    this.setState({ actionLoading: player.id });
+
+    try {
+      // Update profile role to 'player' if needed
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: 'player' })
+        .eq('id', player.id);
+
+      if (profileError) {
+        console.error('Error updating profile role:', profileError);
+      }
+
+      // Send notification to the player
+      try {
+        await createNotification({
+          userId: player.id,
+          title: 'Profile Approved',
+          body: 'Your profile has been approved! Welcome to the team.',
+          type: 'success',
+          referenceType: 'profile',
+          referenceId: player.id,
+        });
+      } catch (notifError) {
+        console.warn('Could not send approval notification:', notifError);
+      }
+
+      // Update local state
+      this.setState((prevState) => ({
+        players: prevState.players.map((p) =>
+          p.id === player.id ? { ...p, status: 'active', profileRole: 'player' } : p
+        ),
+        actionLoading: null,
+      }), this.filterPlayers);
+    } catch (error) {
+      console.error('Error approving player:', error);
+      this.setState({ actionLoading: null });
+    }
   };
 
-  handleDelete = (playerId) => {
-    this.setState((prevState) => ({
-      players: prevState.players.filter((p) => p.id !== playerId),
-    }), this.filterPlayers);
-    this.closeModal();
+  handleDelete = async (player) => {
+    this.setState({ actionLoading: player.id });
+
+    try {
+      if (player.playerId) {
+        // Soft delete: set is_retired = true
+        const { error } = await supabase
+          .from('players')
+          .update({ is_retired: true })
+          .eq('id', player.playerId);
+
+        if (error) {
+          console.error('Error retiring player:', error);
+        }
+      }
+
+      // Update local state
+      this.setState((prevState) => ({
+        players: prevState.players.map((p) =>
+          p.id === player.id ? { ...p, status: 'inactive' } : p
+        ),
+        actionLoading: null,
+      }), this.filterPlayers);
+
+      this.closeModal();
+    } catch (error) {
+      console.error('Error deleting player:', error);
+      this.setState({ actionLoading: null });
+      this.closeModal();
+    }
   };
 
   getStatusBadge = (status) => {
@@ -116,23 +254,24 @@ class PlayersManagement extends Component {
       inactive: 'bg-red-400/20 text-red-400',
     };
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || 'bg-white/10 text-white/50'}`}>
         {status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
 
-  getSubscriptionBadge = (subscription) => {
-    const styles = {
-      Basic: 'bg-white/10 text-white/70',
-      Pro: 'bg-accent-gold/20 text-accent-gold',
-      Elite: 'bg-purple-400/20 text-purple-400',
-    };
-    return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[subscription]}`}>
-        {subscription}
-      </span>
-    );
+  formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return '-';
+    }
   };
 
   renderSortIcon = (field) => {
@@ -150,16 +289,39 @@ class PlayersManagement extends Component {
     );
   };
 
+  renderLoadingState = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-center py-20">
+        <div className="text-center">
+          <svg
+            className="animate-spin w-10 h-10 mx-auto mb-4 text-accent-gold"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <p className="text-white/50">Loading players...</p>
+        </div>
+      </div>
+    </div>
+  );
+
   render() {
     const {
       filteredPlayers,
       searchTerm,
       statusFilter,
-      subscriptionFilter,
       showModal,
       modalType,
       selectedPlayer,
+      isLoading,
+      actionLoading,
     } = this.state;
+
+    if (isLoading) {
+      return this.renderLoadingState();
+    }
 
     const pendingCount = this.state.players.filter((p) => p.status === 'pending').length;
 
@@ -175,14 +337,27 @@ class PlayersManagement extends Component {
             <h1 className="text-2xl font-display font-bold text-white">Player Management</h1>
             <p className="text-white/50 mt-1">Manage players, approve registrations, and track attendance</p>
           </div>
-          {pendingCount > 0 && (
-            <div className="flex items-center gap-2 px-4 py-2 bg-yellow-400/20 rounded-lg">
-              <svg className="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          <div className="flex items-center gap-3">
+            {pendingCount > 0 && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-400/20 rounded-lg">
+                <svg className="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span className="text-yellow-400 font-medium">{pendingCount} pending approval</span>
+              </div>
+            )}
+            <motion.button
+              onClick={this.fetchPlayers}
+              className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              title="Refresh"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
-              <span className="text-yellow-400 font-medium">{pendingCount} pending approval</span>
-            </div>
-          )}
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Filters */}
@@ -227,20 +402,6 @@ class PlayersManagement extends Component {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
-
-            {/* Subscription Filter */}
-            <div>
-              <select
-                value={subscriptionFilter}
-                onChange={this.handleSubscriptionFilter}
-                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold appearance-none cursor-pointer"
-              >
-                <option value="all">All Plans</option>
-                <option value="Basic">Basic</option>
-                <option value="Pro">Pro</option>
-                <option value="Elite">Elite</option>
-              </select>
-            </div>
           </div>
         </motion.div>
 
@@ -275,15 +436,9 @@ class PlayersManagement extends Component {
                   </th>
                   <th
                     className="px-6 py-4 text-left text-xs font-medium text-white/50 uppercase tracking-wider cursor-pointer hover:text-white"
-                    onClick={() => this.handleSort('subscription')}
+                    onClick={() => this.handleSort('joinDate')}
                   >
-                    Plan {this.renderSortIcon('subscription')}
-                  </th>
-                  <th
-                    className="px-6 py-4 text-left text-xs font-medium text-white/50 uppercase tracking-wider cursor-pointer hover:text-white"
-                    onClick={() => this.handleSort('attendance')}
-                  >
-                    Attendance {this.renderSortIcon('attendance')}
+                    Join Date {this.renderSortIcon('joinDate')}
                   </th>
                   <th className="px-6 py-4 text-right text-xs font-medium text-white/50 uppercase tracking-wider">
                     Actions
@@ -297,12 +452,14 @@ class PlayersManagement extends Component {
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-accent-gold/20 rounded-full flex items-center justify-center">
                           <span className="text-accent-gold font-bold">
-                            {player.name.charAt(0)}
+                            {player.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <p className="text-white font-medium">{player.name}</p>
-                          <p className="text-white/50 text-sm">{player.email}</p>
+                          {player.email && (
+                            <p className="text-white/50 text-sm">{player.email}</p>
+                          )}
                         </div>
                       </div>
                     </td>
@@ -313,36 +470,27 @@ class PlayersManagement extends Component {
                       {this.getStatusBadge(player.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {this.getSubscriptionBadge(player.subscription)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${
-                              player.attendance >= 80
-                                ? 'bg-green-400'
-                                : player.attendance >= 60
-                                ? 'bg-yellow-400'
-                                : 'bg-red-400'
-                            }`}
-                            style={{ width: `${player.attendance}%` }}
-                          />
-                        </div>
-                        <span className="text-white/70 text-sm">{player.attendance}%</span>
-                      </div>
+                      <span className="text-white/70 text-sm">{this.formatDate(player.joinDate)}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
                       <div className="flex items-center justify-end gap-2">
                         {player.status === 'pending' && (
                           <button
-                            onClick={() => this.handleApprove(player.id)}
-                            className="p-2 rounded-lg bg-green-400/20 text-green-400 hover:bg-green-400/30 transition-colors"
+                            onClick={() => this.handleApprove(player)}
+                            disabled={actionLoading === player.id}
+                            className="p-2 rounded-lg bg-green-400/20 text-green-400 hover:bg-green-400/30 transition-colors disabled:opacity-50"
                             title="Approve"
                           >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
+                            {actionLoading === player.id ? (
+                              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            ) : (
+                              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
                           </button>
                         )}
                         <button
@@ -354,15 +502,17 @@ class PlayersManagement extends Component {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                           </svg>
                         </button>
-                        <button
-                          onClick={() => this.openModal('delete', player)}
-                          className="p-2 rounded-lg bg-red-400/20 text-red-400 hover:bg-red-400/30 transition-colors"
-                          title="Delete"
-                        >
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        {player.status !== 'inactive' && (
+                          <button
+                            onClick={() => this.openModal('delete', player)}
+                            className="p-2 rounded-lg bg-red-400/20 text-red-400 hover:bg-red-400/30 transition-colors"
+                            title="Deactivate"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -404,10 +554,10 @@ class PlayersManagement extends Component {
                     </svg>
                   </div>
                   <h3 className="text-xl font-display font-bold text-white text-center mb-2">
-                    Delete Player
+                    Deactivate Player
                   </h3>
                   <p className="text-white/60 text-center mb-6">
-                    Are you sure you want to delete <span className="text-white font-semibold">{selectedPlayer?.name}</span>? This action cannot be undone.
+                    Are you sure you want to deactivate <span className="text-white font-semibold">{selectedPlayer?.name}</span>? They will be marked as inactive.
                   </p>
                   <div className="flex gap-3">
                     <button
@@ -417,10 +567,11 @@ class PlayersManagement extends Component {
                       Cancel
                     </button>
                     <button
-                      onClick={() => this.handleDelete(selectedPlayer?.id)}
-                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                      onClick={() => this.handleDelete(selectedPlayer)}
+                      disabled={actionLoading === selectedPlayer?.id}
+                      className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
                     >
-                      Delete
+                      {actionLoading === selectedPlayer?.id ? 'Deactivating...' : 'Deactivate'}
                     </button>
                   </div>
                 </>

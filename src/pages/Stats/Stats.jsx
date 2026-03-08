@@ -8,6 +8,7 @@ import CleanSheetsLeaderboard from './components/CleanSheetsLeaderboard';
 import AttendanceHeatmap from './components/AttendanceHeatmap';
 import DisciplinaryChart from './components/DisciplinaryChart';
 import RatingsRadar from './components/RatingsRadar';
+import { OVERALL_STATS } from '../../data/matches';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -127,7 +128,7 @@ class Stats extends Component {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="inline-block px-4 py-1 bg-accent-gold/10 text-accent-gold text-sm font-semibold tracking-wider rounded-full mb-6"
             >
-              SEASON 2024/25
+              SEASON 2025/26
             </motion.span>
             <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-4">
               Statistics
@@ -174,10 +175,10 @@ class Stats extends Component {
               className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12"
             >
               {[
-                { label: 'League Position', value: '3rd', icon: 'trophy', color: 'text-accent-gold' },
-                { label: 'Goals Scored', value: '42', icon: 'ball', color: 'text-green-400' },
-                { label: 'Clean Sheets', value: '8', icon: 'shield', color: 'text-secondary-blue' },
-                { label: 'Win Rate', value: '64%', icon: 'chart', color: 'text-purple-400' },
+                { label: 'Matches Played', value: `${OVERALL_STATS.played}`, icon: 'trophy', color: 'text-accent-gold' },
+                { label: 'Goals Scored', value: `${OVERALL_STATS.goalsFor}`, icon: 'ball', color: 'text-green-400' },
+                { label: 'Goal Difference', value: `+${OVERALL_STATS.goalDifference}`, icon: 'shield', color: 'text-secondary-blue' },
+                { label: 'Win Rate', value: `${OVERALL_STATS.winRate}%`, icon: 'chart', color: 'text-purple-400' },
               ].map((stat, index) => (
                 <motion.div
                   key={stat.label}

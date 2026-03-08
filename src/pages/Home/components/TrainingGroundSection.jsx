@@ -117,7 +117,7 @@ class TrainingGroundSection extends Component {
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="px-4 py-2 bg-black/60 backdrop-blur-sm rounded-lg inline-block">
                     <p className="text-white/90 text-sm font-medium">
-                      Sunway University Football Field
+                      Kaboona FC Training Ground
                     </p>
                   </div>
                 </div>
@@ -142,7 +142,7 @@ class TrainingGroundSection extends Component {
 
               {/* Description */}
               <p className="text-lg text-white/60 leading-relaxed mb-8">
-                Our home ground at Sunway University provides world-class facilities
+                Our home ground provides world-class facilities
                 for training and matches. The state-of-the-art pitch is where our
                 players develop their skills, build team chemistry, and prepare for
                 competitive play.

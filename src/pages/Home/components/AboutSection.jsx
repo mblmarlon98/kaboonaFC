@@ -57,8 +57,8 @@ class AboutSection extends Component {
 
             {/* Main Heading */}
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-6">
-              Home to{' '}
-              <span className="text-accent-gold">Sunway University</span>
+              Home of{' '}
+              <span className="text-accent-gold">Kaboona FC</span>
             </h2>
 
             {/* Location */}
@@ -69,9 +69,9 @@ class AboutSection extends Component {
             {/* Description */}
             <div className="max-w-3xl mx-auto">
               <p className="text-lg text-white/60 leading-relaxed mb-8">
-                Kaboona FC represents the spirit and passion of Sunway University's football community.
-                Founded by students, for students, we embody the values of teamwork, dedication,
-                and the relentless pursuit of excellence on and off the pitch.
+                Kaboona FC represents the spirit and passion of our football community.
+                Founded with purpose and driven by excellence, we embody the values of teamwork, dedication,
+                and the relentless pursuit of greatness on and off the pitch.
               </p>
 
               {/* Stats Row */}

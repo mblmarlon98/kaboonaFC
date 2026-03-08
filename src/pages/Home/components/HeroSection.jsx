@@ -57,38 +57,7 @@ class HeroSection extends Component {
             className="mb-8"
           >
             <div className="w-32 h-32 md:w-48 md:h-48 mx-auto relative">
-              {/* Tiger SVG Placeholder - Stylized Tiger Face */}
-              <svg
-                viewBox="0 0 100 100"
-                className="w-full h-full text-accent-gold"
-                fill="currentColor"
-              >
-                {/* Tiger Face Outline */}
-                <ellipse cx="50" cy="50" rx="45" ry="40" fill="none" stroke="currentColor" strokeWidth="2" />
-                {/* Ears */}
-                <path d="M15 30 Q10 10 25 20 Q30 25 25 35 Z" fill="currentColor" />
-                <path d="M85 30 Q90 10 75 20 Q70 25 75 35 Z" fill="currentColor" />
-                {/* Eyes */}
-                <ellipse cx="35" cy="45" rx="8" ry="6" fill="currentColor" />
-                <ellipse cx="65" cy="45" rx="8" ry="6" fill="currentColor" />
-                <circle cx="35" cy="45" r="3" fill="#0A0A0A" />
-                <circle cx="65" cy="45" r="3" fill="#0A0A0A" />
-                {/* Nose */}
-                <path d="M50 55 L45 65 L55 65 Z" fill="currentColor" />
-                {/* Stripes */}
-                <path d="M30 25 Q35 35 30 45" stroke="currentColor" strokeWidth="2" fill="none" />
-                <path d="M70 25 Q65 35 70 45" stroke="currentColor" strokeWidth="2" fill="none" />
-                <path d="M25 35 Q30 40 25 50" stroke="currentColor" strokeWidth="2" fill="none" />
-                <path d="M75 35 Q70 40 75 50" stroke="currentColor" strokeWidth="2" fill="none" />
-                {/* Whiskers */}
-                <line x1="25" y1="60" x2="40" y2="58" stroke="currentColor" strokeWidth="1" />
-                <line x1="25" y1="65" x2="40" y2="65" stroke="currentColor" strokeWidth="1" />
-                <line x1="75" y1="60" x2="60" y2="58" stroke="currentColor" strokeWidth="1" />
-                <line x1="75" y1="65" x2="60" y2="65" stroke="currentColor" strokeWidth="1" />
-                {/* Mouth */}
-                <path d="M50 65 Q50 75 45 80" stroke="currentColor" strokeWidth="2" fill="none" />
-                <path d="M50 65 Q50 75 55 80" stroke="currentColor" strokeWidth="2" fill="none" />
-              </svg>
+              <img src="/kaboona-logo.png" alt="Kaboona FC" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.3)]" />
               {/* Glow ring */}
               <div className="absolute inset-0 animate-glow rounded-full" />
             </div>
@@ -112,7 +81,7 @@ class HeroSection extends Component {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="text-xl md:text-2xl text-white/70 font-light tracking-wide mb-12"
           >
-            Pride of Sunway University
+            Rise to Glory
           </motion.p>
 
           {/* CTA Buttons */}
