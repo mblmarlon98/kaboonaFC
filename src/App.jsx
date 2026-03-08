@@ -19,6 +19,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import PlayerModalProvider from './components/shared/PlayerModalContext';
 import { onAuthStateChange, getSession, getCurrentUser } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
+import { setNotifications, addNotification, setUnreadCount } from './redux/slices/notificationSlice';
+import { getNotifications, getUnreadCount, subscribeToNotifications } from './services/notificationService';
 
 // Placeholder pages
 const NotFound = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">404 - Not Found</h1></div>;
@@ -30,6 +32,7 @@ class App extends Component {
       darkMode: true, // Default to dark mode (Netflix style)
     };
     this.authSubscription = null;
+    this.notificationChannel = null;
   }
 
   componentDidMount() {
@@ -50,7 +53,47 @@ class App extends Component {
     if (this.authSubscription) {
       this.authSubscription.unsubscribe();
     }
+    // Clean up notification subscription
+    if (this.notificationChannel) {
+      this.notificationChannel.unsubscribe();
+      this.notificationChannel = null;
+    }
   }
+
+  initializeNotifications = async (user) => {
+    const { setNotifications, setUnreadCount, addNotification } = this.props;
+
+    try {
+      const [notifications, unreadCount] = await Promise.all([
+        getNotifications(user.id),
+        getUnreadCount(user.id),
+      ]);
+      setNotifications(notifications || []);
+      setUnreadCount(unreadCount || 0);
+    } catch (err) {
+      console.error('Failed to fetch notifications:', err);
+    }
+
+    // Unsubscribe from previous channel if any
+    if (this.notificationChannel) {
+      this.notificationChannel.unsubscribe();
+    }
+
+    // Subscribe to realtime notifications
+    this.notificationChannel = subscribeToNotifications(user.id, (newNotification) => {
+      addNotification(newNotification);
+    });
+  };
+
+  clearNotifications = () => {
+    const { setNotifications, setUnreadCount } = this.props;
+    setNotifications([]);
+    setUnreadCount(0);
+    if (this.notificationChannel) {
+      this.notificationChannel.unsubscribe();
+      this.notificationChannel = null;
+    }
+  };
 
   initializeAuth = async () => {
     const { setUser, setSession, setLoading } = this.props;
@@ -60,8 +103,11 @@ class App extends Component {
     if (session) {
       // Get fresh user data from server (includes latest metadata like avatar_url)
       const { user } = await getCurrentUser();
-      setUser(user || session.user);
+      const resolvedUser = user || session.user;
+      setUser(resolvedUser);
       setSession(session);
+      // Initialize notifications for the logged-in user
+      this.initializeNotifications(resolvedUser);
     }
     setLoading(false);
 
@@ -70,11 +116,16 @@ class App extends Component {
       if (event === 'SIGNED_IN' && session) {
         // Get fresh user data on sign in
         const { user } = await getCurrentUser();
-        setUser(user || session.user);
+        const resolvedUser = user || session.user;
+        setUser(resolvedUser);
         setSession(session);
+        // Initialize notifications for the signed-in user
+        this.initializeNotifications(resolvedUser);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setSession(null);
+        // Clear notifications on sign out
+        this.clearNotifications();
       } else if (event === 'TOKEN_REFRESHED' && session) {
         // Refresh user data when token refreshes
         const { user } = await getCurrentUser();
@@ -196,6 +247,9 @@ const mapDispatchToProps = {
   setUser,
   setSession,
   setLoading,
+  setNotifications,
+  addNotification,
+  setUnreadCount,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(App);

@@ -4,6 +4,63 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { connect } from 'react-redux';
 import { signOut } from '../../services/auth';
 import { logout } from '../../redux/slices/authSlice';
+import { markRead, markAllRead } from '../../redux/slices/notificationSlice';
+import { markAsRead, markAllAsRead } from '../../services/notificationService';
+
+function getRelativeTime(dateStr) {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
+
+function getNotificationTypeIcon(type) {
+  switch (type) {
+    case 'training_invite':
+      return { color: 'text-green-400', bg: 'bg-green-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      )};
+    case 'match_invite':
+      return { color: 'text-blue-400', bg: 'bg-blue-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )};
+    case 'formation_published':
+      return { color: 'text-accent-gold', bg: 'bg-accent-gold/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+        </svg>
+      )};
+    case 'match_reminder':
+      return { color: 'text-orange-400', bg: 'bg-orange-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )};
+    case 'player_approved':
+      return { color: 'text-green-400', bg: 'bg-green-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )};
+    default:
+      return { color: 'text-gray-400', bg: 'bg-gray-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )};
+  }
+}
 
 class Navbar extends Component {
   constructor(props) {
@@ -11,16 +68,29 @@ class Navbar extends Component {
     this.state = {
       isScrolled: false,
       isMobileMenuOpen: false,
+      isNotificationOpen: false,
     };
+    this.notificationRef = React.createRef();
   }
 
   componentDidMount() {
     window.addEventListener('scroll', this.handleScroll);
+    document.addEventListener('mousedown', this.handleClickOutside);
   }
 
   componentWillUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
+    document.removeEventListener('mousedown', this.handleClickOutside);
   }
+
+  handleClickOutside = (event) => {
+    if (
+      this.notificationRef.current &&
+      !this.notificationRef.current.contains(event.target)
+    ) {
+      this.setState({ isNotificationOpen: false });
+    }
+  };
 
   handleScroll = () => {
     const isScrolled = window.scrollY > 20;
@@ -39,6 +109,34 @@ class Navbar extends Component {
     this.setState({ isMobileMenuOpen: false });
   };
 
+  toggleNotifications = () => {
+    this.setState((prevState) => ({
+      isNotificationOpen: !prevState.isNotificationOpen,
+    }));
+  };
+
+  handleNotificationClick = async (notification) => {
+    if (!notification.read) {
+      this.props.markRead(notification.id);
+      try {
+        await markAsRead(notification.id);
+      } catch (err) {
+        console.error('Failed to mark notification as read:', err);
+      }
+    }
+  };
+
+  handleMarkAllRead = async () => {
+    const { user } = this.props;
+    if (!user) return;
+    this.props.markAllRead();
+    try {
+      await markAllAsRead(user.id);
+    } catch (err) {
+      console.error('Failed to mark all notifications as read:', err);
+    }
+  };
+
   handleLogout = async () => {
     const { logout } = this.props;
     await signOut();
@@ -46,9 +144,152 @@ class Navbar extends Component {
     this.closeMobileMenu();
   };
 
+  renderNotificationBell() {
+    const { unreadCount, user } = this.props;
+    if (!user) return null;
+
+    return (
+      <div className="relative" ref={this.notificationRef}>
+        <motion.button
+          onClick={this.toggleNotifications}
+          className="relative p-2 rounded-full text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+          whileTap={{ scale: 0.95 }}
+          aria-label="Notifications"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+            />
+          </svg>
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </motion.button>
+
+        <AnimatePresence>
+          {this.state.isNotificationOpen && this.renderNotificationDropdown()}
+        </AnimatePresence>
+      </div>
+    );
+  }
+
+  renderNotificationDropdown() {
+    const { notifications } = this.props;
+    const displayNotifications = notifications.slice(0, 10);
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: -10, scale: 0.95 }}
+        transition={{ duration: 0.15 }}
+        className="absolute right-0 mt-2 w-80 md:w-96 max-h-[70vh] overflow-hidden rounded-xl bg-surface-dark-elevated border border-white/10 shadow-2xl z-50"
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <h3 className="text-sm font-semibold text-white">Notifications</h3>
+          {notifications.length > 0 && (
+            <button
+              onClick={this.handleMarkAllRead}
+              className="text-xs text-accent-gold hover:text-accent-gold/80 transition-colors"
+            >
+              Mark all read
+            </button>
+          )}
+        </div>
+
+        {/* Notification List */}
+        <div className="overflow-y-auto max-h-[calc(70vh-48px)]">
+          {displayNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 px-4">
+              <svg className="w-10 h-10 text-white/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+              <p className="text-sm text-white/40">No notifications yet</p>
+            </div>
+          ) : (
+            displayNotifications.map((notification) => {
+              const typeInfo = getNotificationTypeIcon(notification.type);
+              return (
+                <button
+                  key={notification.id}
+                  onClick={() => this.handleNotificationClick(notification)}
+                  className={`w-full text-left px-4 py-3 flex items-start space-x-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 ${
+                    !notification.read ? 'bg-white/[0.03]' : ''
+                  }`}
+                >
+                  {/* Type Icon */}
+                  <div className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-full ${typeInfo.bg} ${typeInfo.color} flex items-center justify-center`}>
+                    {typeInfo.icon}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <p className={`text-sm truncate ${!notification.read ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
+                        {notification.title}
+                      </p>
+                      {!notification.read && (
+                        <span className="flex-shrink-0 ml-2 mt-1.5 w-2 h-2 rounded-full bg-blue-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-white/50 mt-0.5 line-clamp-2">
+                      {notification.body}
+                    </p>
+                    <p className="text-[10px] text-white/30 mt-1">
+                      {getRelativeTime(notification.created_at)}
+                    </p>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </motion.div>
+    );
+  }
+
+  renderMobileNotificationBell() {
+    const { unreadCount, user } = this.props;
+    if (!user) return null;
+
+    return (
+      <motion.button
+        onClick={this.toggleNotifications}
+        className="relative p-2 rounded-full text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+        whileTap={{ scale: 0.95 }}
+        aria-label="Notifications"
+      >
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+          />
+        </svg>
+        {unreadCount > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+            {unreadCount > 99 ? '99+' : unreadCount}
+          </span>
+        )}
+      </motion.button>
+    );
+  }
+
   render() {
     const { darkMode, toggleDarkMode, user } = this.props;
-    const { isScrolled, isMobileMenuOpen } = this.state;
+    const { isScrolled, isMobileMenuOpen, isNotificationOpen } = this.state;
 
     // Base navigation links
     const navLinks = [
@@ -77,9 +318,7 @@ class Navbar extends Component {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <span className="text-2xl md:text-3xl font-display font-bold text-accent-gold tracking-wider">
-                KABOONA
-              </span>
+              <img src="/kaboona-logo.png" alt="Kaboona FC" className="h-10 md:h-14 w-auto" />
             </Link>
 
             {/* Desktop Navigation */}
@@ -145,6 +384,9 @@ class Navbar extends Component {
                   )}
                 </motion.div>
               </motion.button>
+
+              {/* Notification Bell - Desktop */}
+              {this.renderNotificationBell()}
 
               {/* Auth Buttons or User Avatar */}
               {user ? (
@@ -225,6 +467,9 @@ class Navbar extends Component {
                 )}
               </motion.button>
 
+              {/* Notification Bell - Mobile */}
+              {this.renderMobileNotificationBell()}
+
               {/* Hamburger Button */}
               <button
                 onClick={this.toggleMobileMenu}
@@ -257,6 +502,21 @@ class Navbar extends Component {
             </div>
           </div>
         </div>
+
+        {/* Mobile Notification Dropdown */}
+        <AnimatePresence>
+          {isNotificationOpen && user && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="md:hidden bg-surface-dark-elevated border-t border-white/10"
+            >
+              {this.renderMobileNotificationPanel()}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Mobile Menu */}
         <AnimatePresence>
@@ -335,10 +595,101 @@ class Navbar extends Component {
       </nav>
     );
   }
+
+  renderMobileNotificationPanel() {
+    const { notifications } = this.props;
+    const displayNotifications = notifications.slice(0, 10);
+
+    return (
+      <div className="max-h-[60vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <h3 className="text-sm font-semibold text-white">Notifications</h3>
+          <div className="flex items-center space-x-3">
+            {notifications.length > 0 && (
+              <button
+                onClick={this.handleMarkAllRead}
+                className="text-xs text-accent-gold hover:text-accent-gold/80 transition-colors"
+              >
+                Mark all read
+              </button>
+            )}
+            <button
+              onClick={this.toggleNotifications}
+              className="text-xs text-white/50 hover:text-white/80 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+
+        {/* Notification List */}
+        <div className="overflow-y-auto max-h-[calc(60vh-48px)]">
+          {displayNotifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-10 px-4">
+              <svg className="w-10 h-10 text-white/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                />
+              </svg>
+              <p className="text-sm text-white/40">No notifications yet</p>
+            </div>
+          ) : (
+            displayNotifications.map((notification) => {
+              const typeInfo = getNotificationTypeIcon(notification.type);
+              return (
+                <button
+                  key={notification.id}
+                  onClick={() => this.handleNotificationClick(notification)}
+                  className={`w-full text-left px-4 py-3 flex items-start space-x-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 ${
+                    !notification.read ? 'bg-white/[0.03]' : ''
+                  }`}
+                >
+                  {/* Type Icon */}
+                  <div className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-full ${typeInfo.bg} ${typeInfo.color} flex items-center justify-center`}>
+                    {typeInfo.icon}
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between">
+                      <p className={`text-sm truncate ${!notification.read ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
+                        {notification.title}
+                      </p>
+                      {!notification.read && (
+                        <span className="flex-shrink-0 ml-2 mt-1.5 w-2 h-2 rounded-full bg-blue-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-white/50 mt-0.5 line-clamp-2">
+                      {notification.body}
+                    </p>
+                    <p className="text-[10px] text-white/30 mt-1">
+                      {getRelativeTime(notification.created_at)}
+                    </p>
+                  </div>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+    );
+  }
 }
+
+const mapStateToProps = (state) => ({
+  notifications: state.notifications?.notifications || [],
+  unreadCount: state.notifications?.unreadCount || 0,
+  user: state.auth?.user,
+});
 
 const mapDispatchToProps = {
   logout,
+  markRead,
+  markAllRead,
 };
 
-export default connect(null, mapDispatchToProps)(Navbar);
+export default connect(mapStateToProps, mapDispatchToProps)(Navbar);
