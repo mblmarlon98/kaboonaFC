@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PlayerFIFACard from './components/PlayerFIFACard';
 import QuickStats from './components/QuickStats';
+import UpcomingEvents from './components/UpcomingEvents';
 import RecentMatches from './components/RecentMatches';
 import AttendanceHistory from './components/AttendanceHistory';
 import SubscriptionCard from './components/SubscriptionCard';
@@ -305,6 +306,11 @@ class Profile extends Component {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          <UpcomingEvents />
         </div>
 
         {/* Bottom Section */}
