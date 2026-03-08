@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import supabase from '../../../services/supabase';
+import { PlayerFIFACard } from '../../../components/shared';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -75,7 +76,7 @@ class GlorySection extends Component {
         console.warn('League table not available:', leagueError);
       }
 
-      // For now, use mock data if Supabase is not configured
+      // Mock data - in production these would come from database
       const mockLeagueTable = [
         { position: 1, team: 'Tigers FC', played: 10, won: 8, drawn: 1, lost: 1, gd: 15, points: 25 },
         { position: 2, team: 'Sunway United', played: 10, won: 7, drawn: 2, lost: 1, gd: 12, points: 23 },
@@ -85,20 +86,79 @@ class GlorySection extends Component {
       ];
 
       const mockTopScorers = [
-        { name: 'Ahmad Rizal', goals: 12, team: 'KABOONA FC' },
-        { name: 'Chen Wei', goals: 8, team: 'KABOONA FC' },
-        { name: 'Danial Hakim', goals: 6, team: 'KABOONA FC' },
+        {
+          name: 'Ahmad Rizal',
+          goals: 12,
+          position: 'ST',
+          number: 9,
+          country: 'my',
+          stats: { pace: 82, shooting: 85, passing: 70, dribbling: 78, defending: 35, physical: 75 }
+        },
+        {
+          name: 'Chen Wei',
+          goals: 8,
+          position: 'CAM',
+          number: 10,
+          country: 'my',
+          stats: { pace: 75, shooting: 80, passing: 85, dribbling: 82, defending: 40, physical: 65 }
+        },
+        {
+          name: 'Danial Hakim',
+          goals: 6,
+          position: 'LW',
+          number: 11,
+          country: 'my',
+          stats: { pace: 88, shooting: 72, passing: 68, dribbling: 80, defending: 30, physical: 60 }
+        },
       ];
 
       const mockCleanSheets = [
-        { name: 'Faizal Rahman', cleanSheets: 5, team: 'KABOONA FC' },
-        { name: 'Kevin Tan', cleanSheets: 3, team: 'KABOONA FC' },
+        {
+          name: 'Faizal Rahman',
+          cleanSheets: 5,
+          position: 'GK',
+          number: 1,
+          country: 'my',
+          stats: { diving: 80, handling: 78, kicking: 70, reflexes: 82, speed: 55, positioning: 75 }
+        },
+        {
+          name: 'Kevin Tan',
+          cleanSheets: 3,
+          position: 'GK',
+          number: 13,
+          country: 'my',
+          stats: { diving: 75, handling: 72, kicking: 68, reflexes: 76, speed: 50, positioning: 70 }
+        },
       ];
 
       const mockMostAttendance = [
-        { name: 'Muhammad Amir', sessions: 48, attendance: '96%' },
-        { name: 'Lee Jun Wei', sessions: 47, attendance: '94%' },
-        { name: 'Hafiz Ismail', sessions: 46, attendance: '92%' },
+        {
+          name: 'Muhammad Amir',
+          sessions: 48,
+          attendance: '96%',
+          position: 'CM',
+          number: 8,
+          country: 'my',
+          stats: { pace: 70, shooting: 65, passing: 80, dribbling: 72, defending: 75, physical: 78 }
+        },
+        {
+          name: 'Lee Jun Wei',
+          sessions: 47,
+          attendance: '94%',
+          position: 'CB',
+          number: 4,
+          country: 'my',
+          stats: { pace: 65, shooting: 45, passing: 60, dribbling: 55, defending: 82, physical: 80 }
+        },
+        {
+          name: 'Hafiz Ismail',
+          sessions: 46,
+          attendance: '92%',
+          position: 'RB',
+          number: 2,
+          country: 'my',
+          stats: { pace: 78, shooting: 50, passing: 68, dribbling: 65, defending: 75, physical: 72 }
+        },
       ];
 
       const mockWallOfShame = [
@@ -169,95 +229,6 @@ class GlorySection extends Component {
     );
   };
 
-  renderTopScorers = () => {
-    const { topScorers, loading } = this.state;
-
-    if (loading) return <SkeletonCard />;
-
-    return (
-      <div className="space-y-4">
-        {topScorers.map((player, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-between p-3 rounded-lg bg-surface-dark hover:bg-surface-dark-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <span
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                  index === 0
-                    ? 'bg-accent-gold text-black'
-                    : index === 1
-                    ? 'bg-white/20 text-white'
-                    : 'bg-white/10 text-white/60'
-                }`}
-              >
-                {index + 1}
-              </span>
-              <span className="text-white/90">{player.name}</span>
-            </div>
-            <span className="text-accent-gold font-bold">{player.goals} goals</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  renderCleanSheets = () => {
-    const { cleanSheets, loading } = this.state;
-
-    if (loading) return <SkeletonCard />;
-
-    return (
-      <div className="space-y-4">
-        {cleanSheets.map((player, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-between p-3 rounded-lg bg-surface-dark hover:bg-surface-dark-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">
-                {index === 0 ? String.fromCodePoint(0x1F947) : String.fromCodePoint(0x1F948)}
-              </span>
-              <span className="text-white/90">{player.name}</span>
-            </div>
-            <span className="text-secondary-blue font-bold">{player.cleanSheets} clean sheets</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  renderMostAttendance = () => {
-    const { mostAttendance, loading } = this.state;
-
-    if (loading) return <SkeletonCard />;
-
-    return (
-      <div className="space-y-4">
-        {mostAttendance.map((player, index) => (
-          <div
-            key={index}
-            className="flex items-center justify-between p-3 rounded-lg bg-surface-dark hover:bg-surface-dark-hover transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
-                <svg className="w-4 h-4 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <span className="text-white/90">{player.name}</span>
-            </div>
-            <span className="text-green-400 font-bold">{player.attendance}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   renderWallOfShame = () => {
     const { wallOfShame, loading } = this.state;
 
@@ -291,6 +262,8 @@ class GlorySection extends Component {
   };
 
   render() {
+    const { topScorers, cleanSheets, mostAttendance, loading } = this.state;
+
     return (
       <section
         ref={this.sectionRef}
@@ -308,74 +281,147 @@ class GlorySection extends Component {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <span className="inline-block px-4 py-1 bg-accent-gold/10 text-accent-gold text-sm font-semibold tracking-wider rounded-full mb-6">
-              GLORY SECTION
-            </span>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-white">
-              Our <span className="text-accent-gold">Achievements</span>
-            </h2>
-          </div>
-
-          {/* Glory Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* League Table Card */}
-            <div className="glory-card lg:col-span-2 p-6 bg-surface-dark-elevated rounded-2xl border border-white/5 hover:border-accent-gold/30 transition-all duration-300">
-              <h3 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
-                <svg className="w-6 h-6 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                League Table
-              </h3>
-              {this.renderLeagueTable()}
+          {/* GLORY SECTION - League Table */}
+          <div className="mb-24">
+            <div className="text-center mb-12">
+              <span className="inline-block px-4 py-1 bg-accent-gold/10 text-accent-gold text-sm font-semibold tracking-wider rounded-full mb-6">
+                GLORY SECTION
+              </span>
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-white">
+                League <span className="text-accent-gold">Standing</span>
+              </h2>
             </div>
 
-            {/* Top Scorers Card */}
-            <div className="glory-card p-6 bg-surface-dark-elevated rounded-2xl border border-white/5 hover:border-accent-gold/30 transition-all duration-300">
-              <h3 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
-                <svg className="w-6 h-6 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="max-w-3xl mx-auto">
+              <div className="glory-card p-6 bg-surface-dark-elevated rounded-2xl border border-white/5 hover:border-accent-gold/30 transition-all duration-300">
+                <h3 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
+                  <svg className="w-6 h-6 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  League Table
+                </h3>
+                {this.renderLeagueTable()}
+              </div>
+            </div>
+          </div>
+
+          {/* ACHIEVEMENTS SECTION */}
+          <div className="mb-24">
+            <div className="text-center mb-12">
+              <span className="inline-block px-4 py-1 bg-green-500/10 text-green-400 text-sm font-semibold tracking-wider rounded-full mb-6">
+                ACHIEVEMENTS
+              </span>
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-white">
+                Our <span className="text-accent-gold">Stars</span>
+              </h2>
+            </div>
+
+            {/* Top Scorers */}
+            <div className="mb-16">
+              <h3 className="text-2xl font-display font-bold text-white mb-8 text-center flex items-center justify-center gap-3">
+                <svg className="w-8 h-8 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
                 Top Scorers
               </h3>
-              {this.renderTopScorers()}
+              <div className="flex flex-wrap justify-center gap-6">
+                {loading ? (
+                  <SkeletonCard />
+                ) : (
+                  topScorers.map((player, index) => (
+                    <div key={index} className="glory-card">
+                      <PlayerFIFACard
+                        name={player.name}
+                        position={player.position}
+                        number={player.number}
+                        country={player.country}
+                        stats={player.stats}
+                        size="md"
+                        badge={`${player.goals} Goals`}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Clean Sheets Card */}
-            <div className="glory-card p-6 bg-surface-dark-elevated rounded-2xl border border-white/5 hover:border-accent-gold/30 transition-all duration-300">
-              <h3 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
-                <svg className="w-6 h-6 text-secondary-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Clean Sheets */}
+            <div className="mb-16">
+              <h3 className="text-2xl font-display font-bold text-white mb-8 text-center flex items-center justify-center gap-3">
+                <svg className="w-8 h-8 text-secondary-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Clean Sheets
               </h3>
-              {this.renderCleanSheets()}
+              <div className="flex flex-wrap justify-center gap-6">
+                {loading ? (
+                  <SkeletonCard />
+                ) : (
+                  cleanSheets.map((player, index) => (
+                    <div key={index} className="glory-card">
+                      <PlayerFIFACard
+                        name={player.name}
+                        position={player.position}
+                        number={player.number}
+                        country={player.country}
+                        stats={player.stats}
+                        size="md"
+                        badge={`${player.cleanSheets} Clean Sheets`}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
 
-            {/* Most Attendance Card */}
-            <div className="glory-card p-6 bg-surface-dark-elevated rounded-2xl border border-white/5 hover:border-accent-gold/30 transition-all duration-300">
-              <h3 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
-                <svg className="w-6 h-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {/* Best Attendance */}
+            <div className="mb-16">
+              <h3 className="text-2xl font-display font-bold text-white mb-8 text-center flex items-center justify-center gap-3">
+                <svg className="w-8 h-8 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                Most Attendance
+                Best Attendance
               </h3>
-              {this.renderMostAttendance()}
+              <div className="flex flex-wrap justify-center gap-6">
+                {loading ? (
+                  <SkeletonCard />
+                ) : (
+                  mostAttendance.map((player, index) => (
+                    <div key={index} className="glory-card">
+                      <PlayerFIFACard
+                        name={player.name}
+                        position={player.position}
+                        number={player.number}
+                        country={player.country}
+                        stats={player.stats}
+                        size="md"
+                        badge={player.attendance}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* WALL OF SHAME */}
+          <div>
+            <div className="text-center mb-12">
+              <span className="inline-block px-4 py-1 bg-red-500/10 text-red-400 text-sm font-semibold tracking-wider rounded-full mb-6">
+                HALL OF INFAMY
+              </span>
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-white">
+                Wall of <span className="text-red-400">Shame</span>
+              </h2>
             </div>
 
-            {/* Wall of Shame Card */}
-            <div className="glory-card p-6 bg-surface-dark-elevated rounded-2xl border border-red-500/20 hover:border-red-500/40 transition-all duration-300">
-              <h3 className="text-xl font-display font-bold text-white mb-6 flex items-center gap-2">
-                <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                Wall of Shame
-              </h3>
-              {this.renderWallOfShame()}
-              <p className="text-white/30 text-xs mt-4 italic text-center">
-                * All in good fun! We love these guys.
-              </p>
+            <div className="max-w-2xl mx-auto">
+              <div className="glory-card p-6 bg-surface-dark-elevated rounded-2xl border border-red-500/20 hover:border-red-500/40 transition-all duration-300">
+                {this.renderWallOfShame()}
+                <p className="text-white/30 text-xs mt-4 italic text-center">
+                  * All in good fun! We love these guys.
+                </p>
+              </div>
             </div>
           </div>
         </div>

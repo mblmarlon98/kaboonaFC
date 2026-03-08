@@ -1,9 +1,11 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PlayerFIFACard from './components/PlayerFIFACard';
 import StatSlider from './components/StatSlider';
+import { supabase } from '../../services/supabase';
+import { setUser } from '../../redux/slices/authSlice';
 
 /**
  * Profile Edit page
@@ -16,6 +18,8 @@ class ProfileEdit extends Component {
       isLoading: true,
       isSaving: false,
       hasChanges: false,
+      redirectToProfile: false,
+      photoFile: null, // Store the actual file for upload
       formData: {
         // Personal Info
         name: '',
@@ -24,11 +28,14 @@ class ProfileEdit extends Component {
 
         // Player Info
         position: 'CAM',
+        alternatePositions: [],
         number: 10,
         height: '',
         weight: '',
         preferredFoot: 'Right',
         country: 'gb',
+        skillMoves: 3,
+        weakFoot: 3,
 
         // Stats (self-rated)
         stats: {
@@ -49,35 +56,92 @@ class ProfileEdit extends Component {
     this.loadProfileData();
   }
 
-  loadProfileData = () => {
-    setTimeout(() => {
-      const { user } = this.props;
+  loadProfileData = async () => {
+    const { user } = this.props;
+    const metadata = user?.user_metadata || {};
 
-      const mockData = {
-        name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Player',
+    try {
+      // Try to load from database first
+      const { data: player } = await supabase
+        .from('players_with_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('profile_image_url, full_name')
+        .eq('id', user.id)
+        .single();
+
+      // Use database data if available, fallback to metadata
+      const isGoalkeeper = (player?.position || metadata.position) === 'GK';
+
+      const profileData = {
+        name: player?.name || profile?.full_name || metadata.full_name || user?.email?.split('@')[0] || 'Player',
         email: user?.email || 'player@kaboonafc.com',
-        profilePhoto: null,
-        position: 'CAM',
-        number: 10,
-        height: '178',
-        weight: '72',
-        preferredFoot: 'Right',
-        country: 'gb',
-        stats: {
-          pace: 78,
-          shooting: 82,
-          passing: 85,
-          dribbling: 80,
-          defending: 45,
-          physical: 68,
+        profilePhoto: player?.image || profile?.profile_image_url || metadata.avatar_url || null,
+        position: player?.position || metadata.position || 'CAM',
+        number: player?.number || metadata.jersey_number || 10,
+        height: player?.height || metadata.height || '',
+        weight: player?.weight || metadata.weight || '',
+        preferredFoot: player?.foot ? (player.foot.charAt(0).toUpperCase() + player.foot.slice(1)) : (metadata.preferred_foot || 'Right'),
+        country: player?.country || metadata.country || 'gb',
+        alternatePositions: player?.alternate_positions || metadata.alternate_positions || [],
+        skillMoves: player?.skill_moves || metadata.skill_moves || 3,
+        weakFoot: player?.weak_foot || metadata.weak_foot || 3,
+        stats: player?.stats || metadata.stats || (isGoalkeeper ? {
+          diving: 70,
+          handling: 70,
+          kicking: 70,
+          reflexes: 70,
+          speed: 60,
+          positioning: 70,
+        } : {
+          pace: 70,
+          shooting: 70,
+          passing: 70,
+          dribbling: 70,
+          defending: 50,
+          physical: 60,
+        }),
+      };
+
+      this.setState({
+        isLoading: false,
+        formData: profileData,
+      });
+    } catch (error) {
+      console.warn('Error loading from database, using metadata:', error);
+      // Fallback to metadata
+      const profileData = {
+        name: metadata.full_name || user?.email?.split('@')[0] || 'Player',
+        email: user?.email || 'player@kaboonafc.com',
+        profilePhoto: metadata.avatar_url || null,
+        position: metadata.position || 'CAM',
+        number: metadata.jersey_number || 10,
+        height: metadata.height || '',
+        weight: metadata.weight || '',
+        preferredFoot: metadata.preferred_foot || 'Right',
+        country: metadata.country || 'gb',
+        alternatePositions: metadata.alternate_positions || [],
+        skillMoves: metadata.skill_moves || 3,
+        weakFoot: metadata.weak_foot || 3,
+        stats: metadata.stats || {
+          pace: 70,
+          shooting: 70,
+          passing: 70,
+          dribbling: 70,
+          defending: 50,
+          physical: 60,
         },
       };
 
       this.setState({
         isLoading: false,
-        formData: mockData,
+        formData: profileData,
       });
-    }, 500);
+    }
   };
 
   handleInputChange = (e) => {
@@ -111,14 +175,25 @@ class ProfileEdit extends Component {
   handlePhotoUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        this.setState((prevState) => ({
+          errors: { ...prevState.errors, photo: 'File size must be less than 5MB' },
+        }));
+        return;
+      }
+
+      // Store file for upload and create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         this.setState((prevState) => ({
+          photoFile: file, // Store actual file for upload
           formData: {
             ...prevState.formData,
-            profilePhoto: reader.result,
+            profilePhoto: reader.result, // Base64 for preview
           },
           hasChanges: true,
+          errors: { ...prevState.errors, photo: null },
         }));
       };
       reader.readAsDataURL(file);
@@ -150,12 +225,152 @@ class ProfileEdit extends Component {
 
     this.setState({ isSaving: true });
 
-    // Simulate API call
-    setTimeout(() => {
-      this.setState({ isSaving: false, hasChanges: false });
-      // Show success message or redirect
-      console.log('Profile saved:', this.state.formData);
-    }, 1000);
+    try {
+      const { user } = this.props;
+      const { formData, photoFile } = this.state;
+      let avatarUrl = formData.profilePhoto;
+
+      // Upload photo to Supabase Storage if a new file was selected
+      if (photoFile) {
+        const fileExt = photoFile.name.split('.').pop();
+        const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+
+        // Upload the file to the avatars bucket
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, photoFile, {
+            cacheControl: '3600',
+            upsert: true,
+          });
+
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          // Check for common storage errors
+          if (uploadError.message?.includes('Bucket not found') ||
+              uploadError.message?.includes('bucket') ||
+              uploadError.statusCode === 404) {
+            this.setState({
+              errors: { photo: 'Storage bucket "avatars" not found. Please create it in Supabase dashboard.' },
+              isSaving: false,
+            });
+            return;
+          }
+          throw uploadError;
+        }
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+
+        avatarUrl = publicUrl;
+      }
+
+      // Update user metadata in Supabase Auth
+      const { data: updatedUserData, error: updateError } = await supabase.auth.updateUser({
+        data: {
+          full_name: formData.name,
+          avatar_url: avatarUrl,
+          position: formData.position,
+          jersey_number: formData.number,
+          height: formData.height,
+          weight: formData.weight,
+          preferred_foot: formData.preferredFoot,
+          country: formData.country,
+          alternate_positions: formData.alternatePositions,
+          skill_moves: formData.skillMoves,
+          weak_foot: formData.weakFoot,
+          stats: formData.stats,
+        },
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Also update the profiles table in database
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({
+          full_name: formData.name,
+          profile_image_url: avatarUrl,
+        })
+        .eq('id', user.id);
+
+      if (profileError) {
+        console.warn('Could not update profiles table:', profileError);
+      }
+
+      // Check if user has a player record and update it too
+      const { data: existingPlayer } = await supabase
+        .from('players')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingPlayer) {
+        // Determine if GK stats or outfield stats
+        const isGoalkeeper = formData.position === 'GK';
+        const playerUpdate = {
+          name: formData.name,
+          image: avatarUrl,
+          position: formData.position,
+          jersey_number: parseInt(formData.number) || 10,
+          height: formData.height ? parseInt(formData.height) : null,
+          weight: formData.weight ? parseInt(formData.weight) : null,
+          preferred_foot: formData.preferredFoot?.toLowerCase() || 'right',
+          country: formData.country,
+          alternate_positions: formData.alternatePositions || [],
+          skill_moves: formData.skillMoves || 3,
+          weak_foot_rating: formData.weakFoot || 3,
+        };
+
+        // Add stats based on position
+        if (isGoalkeeper) {
+          playerUpdate.diving = formData.stats.diving || 50;
+          playerUpdate.handling = formData.stats.handling || 50;
+          playerUpdate.kicking = formData.stats.kicking || 50;
+          playerUpdate.reflexes = formData.stats.reflexes || 50;
+          playerUpdate.gk_speed = formData.stats.speed || 50;
+          playerUpdate.gk_positioning = formData.stats.positioning || 50;
+        } else {
+          playerUpdate.pace = formData.stats.pace || 50;
+          playerUpdate.shooting = formData.stats.shooting || 50;
+          playerUpdate.passing = formData.stats.passing || 50;
+          playerUpdate.dribbling = formData.stats.dribbling || 50;
+          playerUpdate.defending = formData.stats.defending || 50;
+          playerUpdate.physical = formData.stats.physical || 50;
+        }
+
+        const { error: playerError } = await supabase
+          .from('players')
+          .update(playerUpdate)
+          .eq('user_id', user.id);
+
+        if (playerError) {
+          console.warn('Could not update players table:', playerError);
+        }
+      }
+
+      // Update Redux state with the new user data
+      if (updatedUserData?.user) {
+        this.props.setUser(updatedUserData.user);
+      }
+
+      this.setState({
+        isSaving: false,
+        hasChanges: false,
+        photoFile: null,
+        formData: { ...formData, profilePhoto: avatarUrl },
+        redirectToProfile: true,
+      });
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      this.setState({
+        isSaving: false,
+        errors: { submit: error.message || 'Failed to save profile' },
+      });
+    }
   };
 
   handleManageSubscription = () => {
@@ -197,7 +412,11 @@ class ProfileEdit extends Component {
   );
 
   render() {
-    const { isLoading, isSaving, hasChanges, formData, errors } = this.state;
+    const { isLoading, isSaving, hasChanges, formData, errors, redirectToProfile } = this.state;
+
+    if (redirectToProfile) {
+      return <Navigate to="/profile" replace />;
+    }
 
     if (isLoading) {
       return this.renderLoadingState();
@@ -205,6 +424,86 @@ class ProfileEdit extends Component {
 
     const positions = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
     const isGoalkeeper = formData.position === 'GK';
+
+    const countries = [
+      { code: 'af', name: 'Afghanistan', flag: '🇦🇫' },
+      { code: 'al', name: 'Albania', flag: '🇦🇱' },
+      { code: 'dz', name: 'Algeria', flag: '🇩🇿' },
+      { code: 'ar', name: 'Argentina', flag: '🇦🇷' },
+      { code: 'au', name: 'Australia', flag: '🇦🇺' },
+      { code: 'at', name: 'Austria', flag: '🇦🇹' },
+      { code: 'be', name: 'Belgium', flag: '🇧🇪' },
+      { code: 'br', name: 'Brazil', flag: '🇧🇷' },
+      { code: 'bg', name: 'Bulgaria', flag: '🇧🇬' },
+      { code: 'cm', name: 'Cameroon', flag: '🇨🇲' },
+      { code: 'ca', name: 'Canada', flag: '🇨🇦' },
+      { code: 'cl', name: 'Chile', flag: '🇨🇱' },
+      { code: 'cn', name: 'China', flag: '🇨🇳' },
+      { code: 'co', name: 'Colombia', flag: '🇨🇴' },
+      { code: 'cr', name: 'Costa Rica', flag: '🇨🇷' },
+      { code: 'hr', name: 'Croatia', flag: '🇭🇷' },
+      { code: 'cz', name: 'Czech Republic', flag: '🇨🇿' },
+      { code: 'dk', name: 'Denmark', flag: '🇩🇰' },
+      { code: 'ec', name: 'Ecuador', flag: '🇪🇨' },
+      { code: 'eg', name: 'Egypt', flag: '🇪🇬' },
+      { code: 'gb-eng', name: 'England', flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+      { code: 'fi', name: 'Finland', flag: '🇫🇮' },
+      { code: 'fr', name: 'France', flag: '🇫🇷' },
+      { code: 'de', name: 'Germany', flag: '🇩🇪' },
+      { code: 'gh', name: 'Ghana', flag: '🇬🇭' },
+      { code: 'gr', name: 'Greece', flag: '🇬🇷' },
+      { code: 'hu', name: 'Hungary', flag: '🇭🇺' },
+      { code: 'is', name: 'Iceland', flag: '🇮🇸' },
+      { code: 'in', name: 'India', flag: '🇮🇳' },
+      { code: 'id', name: 'Indonesia', flag: '🇮🇩' },
+      { code: 'ir', name: 'Iran', flag: '🇮🇷' },
+      { code: 'ie', name: 'Ireland', flag: '🇮🇪' },
+      { code: 'il', name: 'Israel', flag: '🇮🇱' },
+      { code: 'it', name: 'Italy', flag: '🇮🇹' },
+      { code: 'ci', name: 'Ivory Coast', flag: '🇨🇮' },
+      { code: 'jp', name: 'Japan', flag: '🇯🇵' },
+      { code: 'ke', name: 'Kenya', flag: '🇰🇪' },
+      { code: 'kr', name: 'South Korea', flag: '🇰🇷' },
+      { code: 'my', name: 'Malaysia', flag: '🇲🇾' },
+      { code: 'mx', name: 'Mexico', flag: '🇲🇽' },
+      { code: 'ma', name: 'Morocco', flag: '🇲🇦' },
+      { code: 'nl', name: 'Netherlands', flag: '🇳🇱' },
+      { code: 'nz', name: 'New Zealand', flag: '🇳🇿' },
+      { code: 'ng', name: 'Nigeria', flag: '🇳🇬' },
+      { code: 'no', name: 'Norway', flag: '🇳🇴' },
+      { code: 'pk', name: 'Pakistan', flag: '🇵🇰' },
+      { code: 'pa', name: 'Panama', flag: '🇵🇦' },
+      { code: 'py', name: 'Paraguay', flag: '🇵🇾' },
+      { code: 'pe', name: 'Peru', flag: '🇵🇪' },
+      { code: 'ph', name: 'Philippines', flag: '🇵🇭' },
+      { code: 'pl', name: 'Poland', flag: '🇵🇱' },
+      { code: 'pt', name: 'Portugal', flag: '🇵🇹' },
+      { code: 'qa', name: 'Qatar', flag: '🇶🇦' },
+      { code: 'ro', name: 'Romania', flag: '🇷🇴' },
+      { code: 'ru', name: 'Russia', flag: '🇷🇺' },
+      { code: 'sa', name: 'Saudi Arabia', flag: '🇸🇦' },
+      { code: 'gb-sct', name: 'Scotland', flag: '🏴󠁧󠁢󠁳󠁣󠁴󠁿' },
+      { code: 'sn', name: 'Senegal', flag: '🇸🇳' },
+      { code: 'rs', name: 'Serbia', flag: '🇷🇸' },
+      { code: 'sg', name: 'Singapore', flag: '🇸🇬' },
+      { code: 'sk', name: 'Slovakia', flag: '🇸🇰' },
+      { code: 'si', name: 'Slovenia', flag: '🇸🇮' },
+      { code: 'za', name: 'South Africa', flag: '🇿🇦' },
+      { code: 'es', name: 'Spain', flag: '🇪🇸' },
+      { code: 'se', name: 'Sweden', flag: '🇸🇪' },
+      { code: 'ch', name: 'Switzerland', flag: '🇨🇭' },
+      { code: 'th', name: 'Thailand', flag: '🇹🇭' },
+      { code: 'tn', name: 'Tunisia', flag: '🇹🇳' },
+      { code: 'tr', name: 'Turkey', flag: '🇹🇷' },
+      { code: 'ua', name: 'Ukraine', flag: '🇺🇦' },
+      { code: 'ae', name: 'United Arab Emirates', flag: '🇦🇪' },
+      { code: 'gb', name: 'United Kingdom', flag: '🇬🇧' },
+      { code: 'us', name: 'United States', flag: '🇺🇸' },
+      { code: 'uy', name: 'Uruguay', flag: '🇺🇾' },
+      { code: 've', name: 'Venezuela', flag: '🇻🇪' },
+      { code: 'vn', name: 'Vietnam', flag: '🇻🇳' },
+      { code: 'gb-wls', name: 'Wales', flag: '🏴󠁧󠁢󠁷󠁬󠁳󠁿' },
+    ];
 
     // Stats configuration based on position
     const statsConfig = isGoalkeeper
@@ -323,10 +622,13 @@ class ProfileEdit extends Component {
                   <PlayerFIFACard
                     name={formData.name}
                     position={formData.position}
+                    alternate_positions={formData.alternatePositions}
                     number={parseInt(formData.number) || 10}
                     country={formData.country}
                     image={formData.profilePhoto}
                     stats={currentStats}
+                    skill_moves={formData.skillMoves}
+                    weak_foot={formData.weakFoot}
                   />
                 </div>
               </motion.div>
@@ -442,6 +744,48 @@ class ProfileEdit extends Component {
                     </select>
                   </div>
 
+                  {/* Alternate Positions - Only for non-GK players */}
+                  {formData.position !== 'GK' && (
+                    <div className="sm:col-span-2">
+                      <label className="block text-white/60 text-sm mb-2">
+                        Alternate Positions
+                        <span className="text-white/40 ml-2 text-xs">(positions you can also play)</span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {positions.filter(pos => pos !== 'GK' && pos !== formData.position).map((pos) => {
+                          const isSelected = formData.alternatePositions.includes(pos);
+                          return (
+                            <button
+                              key={pos}
+                              type="button"
+                              onClick={() => {
+                                const newAlts = isSelected
+                                  ? formData.alternatePositions.filter(p => p !== pos)
+                                  : [...formData.alternatePositions, pos];
+                                this.setState(prev => ({
+                                  formData: { ...prev.formData, alternatePositions: newAlts },
+                                  hasChanges: true,
+                                }));
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                                isSelected
+                                  ? 'bg-accent-gold text-black'
+                                  : 'bg-surface-dark border border-white/20 text-white/60 hover:border-accent-gold/50 hover:text-white'
+                              }`}
+                            >
+                              {pos}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {formData.alternatePositions.length > 0 && (
+                        <p className="text-accent-gold/70 text-xs mt-2">
+                          Selected: {formData.alternatePositions.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
                   {/* Jersey Number */}
                   <div>
                     <label className="block text-white/60 text-sm mb-2">Jersey Number</label>
@@ -511,17 +855,68 @@ class ProfileEdit extends Component {
                       onChange={this.handleInputChange}
                       className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors appearance-none cursor-pointer"
                     >
-                      <option value="gb">United Kingdom</option>
-                      <option value="us">United States</option>
-                      <option value="es">Spain</option>
-                      <option value="de">Germany</option>
-                      <option value="fr">France</option>
-                      <option value="it">Italy</option>
-                      <option value="br">Brazil</option>
-                      <option value="ar">Argentina</option>
-                      <option value="pt">Portugal</option>
-                      <option value="nl">Netherlands</option>
+                      {countries.map((country) => (
+                        <option key={country.code} value={country.code}>
+                          {country.flag} {country.name}
+                        </option>
+                      ))}
                     </select>
+                  </div>
+
+                  {/* Skill Moves */}
+                  <div>
+                    <label className="block text-white/60 text-sm mb-2">Skill Moves</label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => this.setState(prev => ({
+                            formData: { ...prev.formData, skillMoves: star },
+                            hasChanges: true,
+                          }))}
+                          className="p-1 transition-transform hover:scale-110"
+                        >
+                          <svg
+                            className={`w-8 h-8 ${star <= formData.skillMoves ? 'text-accent-gold' : 'text-white/20'}`}
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </button>
+                      ))}
+                      <span className="ml-2 text-white/50 text-sm">{formData.skillMoves} Star</span>
+                    </div>
+                    <p className="text-white/40 text-xs mt-1">Dribbling tricks & skill moves ability</p>
+                  </div>
+
+                  {/* Weak Foot */}
+                  <div>
+                    <label className="block text-white/60 text-sm mb-2">Weak Foot</label>
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onClick={() => this.setState(prev => ({
+                            formData: { ...prev.formData, weakFoot: star },
+                            hasChanges: true,
+                          }))}
+                          className="p-1 transition-transform hover:scale-110"
+                        >
+                          <svg
+                            className={`w-8 h-8 ${star <= formData.weakFoot ? 'text-accent-gold' : 'text-white/20'}`}
+                            fill="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                          </svg>
+                        </button>
+                      ))}
+                      <span className="ml-2 text-white/50 text-sm">{formData.weakFoot} Star</span>
+                    </div>
+                    <p className="text-white/40 text-xs mt-1">Non-dominant foot ability</p>
                   </div>
                 </div>
               </motion.div>
@@ -623,4 +1018,8 @@ const mapStateToProps = (state) => ({
   user: state.auth?.user,
 });
 
-export default connect(mapStateToProps)(ProfileEdit);
+const mapDispatchToProps = {
+  setUser,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(ProfileEdit);

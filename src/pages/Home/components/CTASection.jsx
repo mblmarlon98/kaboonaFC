@@ -84,7 +84,7 @@ class CTASection extends Component {
             />
           </svg>
         ),
-        link: '/fan-portal',
+        link: '/login?mode=fan',
         buttonText: 'Join Fan Portal',
         gradient: 'from-secondary-blue/20 via-secondary-blue/10 to-transparent',
         borderColor: 'border-secondary-blue/30 hover:border-secondary-blue',

@@ -9,6 +9,9 @@ import ContentManagement from './components/ContentManagement';
 import TrainingManagement from './components/TrainingManagement';
 import PaymentsOverview from './components/PaymentsOverview';
 import InvestorsManagement from './components/InvestorsManagement';
+import UserAnalytics from './components/UserAnalytics';
+import { getCurrentUser } from '../../services/auth';
+import { setUser } from '../../redux/slices/authSlice';
 
 /**
  * Admin Dashboard
@@ -29,12 +32,23 @@ class Admin extends Component {
     };
   }
 
-  componentDidMount() {
+  async componentDidMount() {
     window.scrollTo(0, 0);
     // Check sidebar preference from localStorage
     const savedSidebarState = localStorage.getItem('adminSidebarCollapsed');
     if (savedSidebarState !== null) {
       this.setState({ sidebarCollapsed: savedSidebarState === 'true' });
+    }
+
+    // Refresh user data from database to get latest roles
+    try {
+      const { user } = await getCurrentUser();
+      if (user) {
+        this.props.setUser(user);
+        console.log('Admin page - Refreshed user data:', user);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
     }
   }
 
@@ -153,14 +167,23 @@ class Admin extends Component {
       return this.renderLoadingState();
     }
 
-    // Check if user is admin - for demo purposes, allow access if user exists
-    // In production, check user.role === 'admin' or user.user_metadata.role === 'admin'
+    // Debug logging for admin check
+    console.log('Admin check - User:', user);
+    console.log('Admin check - user.role:', user?.role);
+    console.log('Admin check - user.roles:', user?.roles);
+    console.log('Admin check - user.isAdmin:', user?.isAdmin);
+    console.log('Admin check - user.user_metadata?.role:', user?.user_metadata?.role);
+
+    // Check if user is admin (using isAdmin helper from auth service that checks roles array)
     const isAdmin = user && (
+      user.isAdmin ||
       user.role === 'admin' ||
-      user.user_metadata?.role === 'admin' ||
-      user.email?.includes('admin') ||
-      true // Allow all logged-in users for demo
+      user.hasRole?.('admin') ||
+      user.roles?.includes('admin') ||
+      user.user_metadata?.role === 'admin'
     );
+
+    console.log('Admin check - isAdmin result:', isAdmin);
 
     if (!user) {
       return <Navigate to="/login" replace />;
@@ -317,6 +340,7 @@ class Admin extends Component {
               <Route path="training" element={<TrainingManagement />} />
               <Route path="payments" element={<PaymentsOverview />} />
               <Route path="investors" element={<InvestorsManagement />} />
+              <Route path="analytics" element={<UserAnalytics />} />
             </Routes>
           </main>
         </div>
@@ -330,4 +354,8 @@ const mapStateToProps = (state) => ({
   loading: state.auth?.loading,
 });
 
-export default connect(mapStateToProps)(Admin);
+const mapDispatchToProps = {
+  setUser,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Admin);

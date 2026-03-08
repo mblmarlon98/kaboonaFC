@@ -15,6 +15,21 @@ export const signIn = async (email, password) => {
 };
 
 /**
+ * Sign in with OAuth provider (Google, Apple)
+ * @param {'google' | 'apple'} provider - OAuth provider
+ * @returns {Promise<{data: Object, error: Object}>}
+ */
+export const signInWithOAuth = async (provider) => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider,
+    options: {
+      redirectTo: `${window.location.origin}/auth/callback`,
+    },
+  });
+  return { data, error };
+};
+
+/**
  * Sign up with email, password, and metadata
  * @param {string} email - User email
  * @param {string} password - User password
@@ -54,12 +69,57 @@ export const resetPassword = async (email) => {
 };
 
 /**
- * Get the current authenticated user
- * @returns {Promise<{data: Object, error: Object}>}
+ * Get the current authenticated user with profile data (including roles)
+ * @returns {Promise<{user: Object, error: Object}>}
  */
 export const getCurrentUser = async () => {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  return { user, error };
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError || !user) {
+    return { user: null, error: authError };
+  }
+
+  // Fetch profile to get role and roles array
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role, roles, full_name, profile_image_url')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError) {
+    console.warn('Could not fetch profile:', profileError);
+    // Return user without profile data
+    return { user, error: null };
+  }
+
+  // Get roles array or fallback to single role
+  const roles = profile?.roles || (profile?.role ? [profile.role] : ['fan']);
+  const primaryRole = profile?.role || roles[0] || 'fan';
+
+  // Helper to check if user has a specific role
+  const hasRole = (checkRole) => roles.includes(checkRole) || primaryRole === checkRole;
+
+  // Merge profile data into user object
+  const userWithProfile = {
+    ...user,
+    role: primaryRole,
+    roles: roles,
+    hasRole: hasRole,
+    isAdmin: hasRole('admin'),
+    isPlayer: hasRole('player'),
+    isCoach: hasRole('coach'),
+    isOwner: hasRole('owner'),
+    profile: profile,
+    user_metadata: {
+      ...user.user_metadata,
+      role: primaryRole,
+      roles: roles,
+      full_name: profile?.full_name || user.user_metadata?.full_name,
+      avatar_url: profile?.profile_image_url || user.user_metadata?.avatar_url,
+    },
+  };
+
+  return { user: userWithProfile, error: null };
 };
 
 /**
@@ -83,12 +143,31 @@ export const onAuthStateChange = (callback) => {
   return subscription;
 };
 
+/**
+ * Force refresh the current user's profile data from the database
+ * Call this after database updates to roles/profile
+ * @returns {Promise<{user: Object, error: Object}>}
+ */
+export const refreshUser = async () => {
+  // Force a token refresh to ensure we have fresh data
+  const { data: { session }, error: refreshError } = await supabase.auth.refreshSession();
+
+  if (refreshError) {
+    console.warn('Could not refresh session:', refreshError);
+  }
+
+  // Get the updated user with profile data
+  return getCurrentUser();
+};
+
 export default {
   signIn,
+  signInWithOAuth,
   signUp,
   signOut,
   resetPassword,
   getCurrentUser,
   getSession,
   onAuthStateChange,
+  refreshUser,
 };

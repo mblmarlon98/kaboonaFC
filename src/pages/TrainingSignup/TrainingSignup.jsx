@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import StepIndicator from './components/StepIndicator';
 import AccountStep from './components/AccountStep';
@@ -412,6 +412,15 @@ class TrainingSignup extends Component {
           <p className="text-white/60">
             Start your football journey with Kaboona FC
           </p>
+          <p className="mt-2 text-sm text-white/40">
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              className="text-accent-gold hover:text-accent-gold-light font-medium transition-colors"
+            >
+              Sign In
+            </Link>
+          </p>
         </div>
 
         {/* Progress Indicator */}
@@ -520,6 +529,19 @@ class TrainingSignup extends Component {
           {/* Step Summary */}
           <div className="mt-4 text-center text-sm text-white/40">
             Step {currentStep} of 5 - {this.steps[currentStep - 1].label}
+          </div>
+
+          {/* Alternative: Become a Fan */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-white/50">
+              Just want to support us?{' '}
+              <Link
+                to="/login?mode=fan"
+                className="text-secondary-blue hover:text-secondary-blue-light font-medium transition-colors"
+              >
+                Become a Fan instead
+              </Link>
+            </p>
           </div>
         </motion.div>
       </div>

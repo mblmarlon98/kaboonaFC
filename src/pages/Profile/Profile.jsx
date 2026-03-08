@@ -7,10 +7,12 @@ import QuickStats from './components/QuickStats';
 import RecentMatches from './components/RecentMatches';
 import AttendanceHistory from './components/AttendanceHistory';
 import SubscriptionCard from './components/SubscriptionCard';
+import { supabase } from '../../services/supabase';
 
 /**
  * Profile page (Player Dashboard)
  * Displays player's FIFA card, stats, recent matches, attendance, and subscription
+ * Fetches data from database (players_with_profiles view)
  */
 class Profile extends Component {
   constructor(props) {
@@ -26,52 +28,133 @@ class Profile extends Component {
     // Scroll to top
     window.scrollTo(0, 0);
 
-    // Simulate loading player data
+    // Load player data from database
     this.loadPlayerData();
   }
 
-  loadPlayerData = () => {
-    // Simulate API call with mock data
-    setTimeout(() => {
-      const { user } = this.props;
+  loadPlayerData = async () => {
+    const { user } = this.props;
 
-      // Mock player data
-      const mockPlayerData = {
-        id: user?.id || '1',
-        name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Player',
-        email: user?.email || 'player@kaboonafc.com',
-        position: 'CAM',
-        number: 10,
-        country: 'gb',
-        height: '178 cm',
-        weight: '72 kg',
-        preferredFoot: 'Right',
-        image: null,
-        stats: {
-          pace: 78,
-          shooting: 82,
-          passing: 85,
-          dribbling: 80,
-          defending: 45,
-          physical: 68,
+    if (!user?.id) {
+      this.setState({ isLoading: false, error: 'Not logged in' });
+      return;
+    }
+
+    try {
+      // Fetch player data from database view
+      const { data: player, error: playerError } = await supabase
+        .from('players_with_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      // Fetch profile data for subscription info
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_status, profile_image_url')
+        .eq('id', user.id)
+        .single();
+
+      const metadata = user?.user_metadata || {};
+
+      // Use database data if available, fallback to metadata
+      const playerData = {
+        id: player?.id || user.id,
+        name: player?.name || metadata.full_name || user?.email?.split('@')[0] || 'Player',
+        email: player?.email || user?.email || 'player@kaboonafc.com',
+        position: player?.position || metadata.position || 'CAM',
+        number: player?.number || metadata.jersey_number || 10,
+        country: player?.country || metadata.country || 'gb',
+        height: player?.height ? `${player.height} cm` : (metadata.height ? `${metadata.height} cm` : '-'),
+        weight: player?.weight ? `${player.weight} kg` : (metadata.weight ? `${metadata.weight} kg` : '-'),
+        preferredFoot: player?.foot ? (player.foot.charAt(0).toUpperCase() + player.foot.slice(1)) : (metadata.preferred_foot || 'Right'),
+        image: player?.image || profile?.profile_image_url || metadata.avatar_url || null,
+        stats: player?.stats || metadata.stats || {
+          pace: 70,
+          shooting: 70,
+          passing: 70,
+          dribbling: 70,
+          defending: 50,
+          physical: 60,
         },
-        seasonStats: {
-          goals: 12,
-          assists: 8,
-          matches: 24,
-          attendanceRate: 92,
+        skill_moves: player?.skill_moves || 3,
+        weak_foot: player?.weak_foot || 3,
+        // Season stats would come from a separate database table in production
+        seasonStats: metadata.season_stats || {
+          matches: 0,
+          gamesStarted: 0,
+          goals: 0,
+          assists: 0,
+          cleanSheets: 0,
+          cleanSheetMinutes: 0,
+          yellowCards: 0,
+          redCards: 0,
         },
         subscription: {
-          plan: 'pro',
-          nextBillingDate: '2024-02-15',
+          plan: profile?.subscription_status || metadata.subscription_plan || 'free',
+          nextBillingDate: metadata.next_billing_date || null,
         },
+        // Flag to know if data came from DB
+        isFromDatabase: !!player,
       };
 
       this.setState({
         isLoading: false,
-        playerData: mockPlayerData,
+        playerData,
       });
-    }, 800);
+    } catch (error) {
+      console.error('Error loading player data:', error);
+      // Fallback to metadata on error
+      this.loadFromMetadata();
+    }
+  };
+
+  loadFromMetadata = () => {
+    const { user } = this.props;
+    const metadata = user?.user_metadata || {};
+
+    const playerData = {
+      id: user?.id || '1',
+      name: metadata.full_name || user?.email?.split('@')[0] || 'Player',
+      email: user?.email || 'player@kaboonafc.com',
+      position: metadata.position || 'CAM',
+      number: metadata.jersey_number || 10,
+      country: metadata.country || 'gb',
+      height: metadata.height ? `${metadata.height} cm` : '-',
+      weight: metadata.weight ? `${metadata.weight} kg` : '-',
+      preferredFoot: metadata.preferred_foot || 'Right',
+      image: metadata.avatar_url || null,
+      stats: metadata.stats || {
+        pace: 70,
+        shooting: 70,
+        passing: 70,
+        dribbling: 70,
+        defending: 50,
+        physical: 60,
+      },
+      skill_moves: metadata.skill_moves || 3,
+      weak_foot: metadata.weak_foot || 3,
+      seasonStats: metadata.season_stats || {
+        matches: 0,
+        gamesStarted: 0,
+        goals: 0,
+        assists: 0,
+        cleanSheets: 0,
+        cleanSheetMinutes: 0,
+        yellowCards: 0,
+        redCards: 0,
+      },
+      subscription: {
+        plan: metadata.subscription_plan || 'free',
+        nextBillingDate: metadata.next_billing_date || null,
+      },
+      isFromDatabase: false,
+    };
+
+    this.setState({
+      isLoading: false,
+      playerData,
+    });
   };
 
   handleManageSubscription = () => {
@@ -187,13 +270,15 @@ class Profile extends Component {
                   country={playerData.country}
                   image={playerData.image}
                   stats={playerData.stats}
+                  skill_moves={playerData.skill_moves}
+                  weak_foot={playerData.weak_foot}
                 />
               </div>
 
               {/* Right Column - Stats & Info */}
               <div className="lg:col-span-8 space-y-8">
                 {/* Quick Stats */}
-                <QuickStats stats={playerData.seasonStats} />
+                <QuickStats stats={playerData.seasonStats} position={playerData.position} />
 
                 {/* Player Info Summary */}
                 <motion.div

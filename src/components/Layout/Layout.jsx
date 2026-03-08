@@ -7,7 +7,7 @@ class Layout extends Component {
     const { children, darkMode, toggleDarkMode, user } = this.props;
 
     return (
-      <div className="flex flex-col min-h-screen bg-surface-dark dark:bg-surface-dark">
+      <div className="flex flex-col min-h-screen bg-surface-light dark:bg-surface-dark text-primary-black dark:text-primary-white transition-colors duration-300">
         <Navbar
           darkMode={darkMode}
           toggleDarkMode={toggleDarkMode}

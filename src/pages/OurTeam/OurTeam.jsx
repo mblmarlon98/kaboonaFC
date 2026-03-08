@@ -1,396 +1,158 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
 import TeamHierarchy from './components/TeamHierarchy';
+import SquadOverview from './components/SquadOverview';
 import FootballField from './components/FootballField';
-import PlayerModal from './components/PlayerModal';
 import AlumniSection from './components/AlumniSection';
 import { supabase } from '../../services/supabase';
 
 /**
- * Mock data for development (used when database is empty)
+ * Placeholder data when database is empty
  */
-const MOCK_OWNER = {
-  id: 'owner-1',
-  name: 'Marcus Wellington',
+const PLACEHOLDER_OWNER = {
+  id: 'placeholder-owner',
+  name: 'Team Owner',
   role: 'Team Owner',
-  bio: 'Visionary leader and passionate football enthusiast. Founded Kaboona FC with the dream of building a community-driven club that develops local talent.',
+  bio: 'Add a team owner in the admin panel.',
   image: null,
+  isPlaceholder: true,
 };
 
-const MOCK_COACHES = [
+const PLACEHOLDER_COACHES = [
   {
-    id: 'coach-1',
-    name: 'James Morrison',
+    id: 'placeholder-coach-1',
+    name: 'Head Coach',
     role: 'Head Coach',
     specialization: 'Tactical Development',
     image: null,
+    isPlaceholder: true,
   },
   {
-    id: 'coach-2',
-    name: 'David Silva',
+    id: 'placeholder-coach-2',
+    name: 'Assistant Coach',
     role: 'Assistant Coach',
-    specialization: 'Youth Development',
+    specialization: 'Player Development',
     image: null,
+    isPlaceholder: true,
   },
   {
-    id: 'coach-3',
-    name: 'Michael Torres',
+    id: 'placeholder-coach-3',
+    name: 'GK Coach',
     role: 'Goalkeeping Coach',
     specialization: 'GK Training',
     image: null,
+    isPlaceholder: true,
   },
 ];
 
-const MOCK_PLAYERS = [
-  // Goalkeeper
-  {
-    id: 'player-1',
-    name: 'Erik Blackwood',
-    number: 1,
-    position: 'GK',
+/**
+ * Generate John Doe placeholder players for all positions
+ * Mix of bronze (avg <64), silver (64-74), and gold (75+) tiers
+ */
+const generatePlaceholderPlayers = () => {
+  const positions = [
+    // Goalkeeper - GOLD (avg 78)
+    { position: 'GK', number: 1, stats: { diving: 82, handling: 80, kicking: 75, reflexes: 85, speed: 70, positioning: 78 } },
+    // Defenders
+    { position: 'RB', number: 2, stats: { pace: 58, shooting: 45, passing: 55, dribbling: 52, defending: 60, physical: 58 } }, // BRONZE (avg 55)
+    { position: 'CB', number: 4, stats: { pace: 65, shooting: 45, passing: 62, dribbling: 55, defending: 78, physical: 80 } }, // SILVER (avg 64)
+    { position: 'CB', number: 5, stats: { pace: 72, shooting: 48, passing: 70, dribbling: 65, defending: 82, physical: 85 } }, // GOLD (avg 70)
+    { position: 'LB', number: 3, stats: { pace: 55, shooting: 40, passing: 52, dribbling: 50, defending: 58, physical: 55 } }, // BRONZE (avg 52)
+    // Midfielders
+    { position: 'CDM', number: 6, stats: { pace: 68, shooting: 58, passing: 74, dribbling: 70, defending: 75, physical: 76 } }, // SILVER (avg 70)
+    { position: 'CM', number: 8, stats: { pace: 78, shooting: 75, passing: 82, dribbling: 80, defending: 70, physical: 75 } }, // GOLD (avg 77)
+    { position: 'CM', number: 10, stats: { pace: 72, shooting: 72, passing: 80, dribbling: 78, defending: 55, physical: 65 } }, // SILVER (avg 70)
+    { position: 'RM', number: 7, stats: { pace: 60, shooting: 55, passing: 58, dribbling: 62, defending: 45, physical: 52 } }, // BRONZE (avg 55)
+    { position: 'LM', number: 11, stats: { pace: 84, shooting: 68, passing: 70, dribbling: 80, defending: 42, physical: 60 } }, // SILVER (avg 67)
+    // Attackers
+    { position: 'ST', number: 9, stats: { pace: 88, shooting: 85, passing: 72, dribbling: 82, defending: 35, physical: 78 } }, // GOLD (avg 73)
+  ];
+
+  // Placeholder images of football players in action (from Unsplash)
+  const placeholderImages = [
+    'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=400&h=500&fit=crop&crop=top',
+    'https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=400&h=500&fit=crop&crop=top',
+    'https://images.unsplash.com/photo-1606925797300-0b35e9d1794e?w=400&h=500&fit=crop&crop=top',
+    'https://images.unsplash.com/photo-1431324155629-1a6deb1dec8d?w=400&h=500&fit=crop&crop=top',
+    'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&h=500&fit=crop&crop=top',
+  ];
+
+  return positions.map((pos, index) => ({
+    id: `placeholder-${pos.position}-${index}`,
+    name: 'John Doe',
+    number: pos.number,
+    position: pos.position,
     country: 'gb',
     countryName: 'England',
-    age: 28,
-    height: "6'2\"",
-    weight: '185 lbs',
-    foot: 'Right',
-    bio: 'Commanding presence in goal with exceptional reflexes and distribution.',
-    stats: {
-      diving: 85,
-      handling: 82,
-      kicking: 78,
-      reflexes: 88,
-      gk_speed: 72,
-      gk_positioning: 84,
-    },
-    image: null,
-  },
-  // Defenders
-  {
-    id: 'player-2',
-    name: 'Lucas Mendes',
-    number: 2,
-    position: 'RB',
-    country: 'br',
-    countryName: 'Brazil',
-    age: 24,
-    height: "5'10\"",
-    weight: '165 lbs',
-    foot: 'Right',
-    bio: 'Dynamic right-back with explosive pace and excellent crossing ability.',
-    stats: {
-      pace: 89,
-      shooting: 62,
-      passing: 75,
-      dribbling: 78,
-      defending: 76,
-      physical: 71,
-    },
-    image: null,
-  },
-  {
-    id: 'player-3',
-    name: 'Viktor Kozlov',
-    number: 4,
-    position: 'CB',
-    country: 'ua',
-    countryName: 'Ukraine',
-    age: 27,
-    height: "6'3\"",
-    weight: '195 lbs',
-    foot: 'Right',
-    bio: 'Towering centre-back with aerial dominance and strong tackling.',
-    stats: {
-      pace: 68,
-      shooting: 45,
-      passing: 62,
-      dribbling: 55,
-      defending: 87,
-      physical: 88,
-    },
-    image: null,
-  },
-  {
-    id: 'player-4',
-    name: 'Marco Rossi',
-    number: 5,
-    position: 'CB',
-    country: 'it',
-    countryName: 'Italy',
-    age: 29,
-    height: "6'1\"",
-    weight: '187 lbs',
-    foot: 'Left',
-    bio: 'Experienced defender known for reading the game and leadership.',
-    stats: {
-      pace: 65,
-      shooting: 48,
-      passing: 72,
-      dribbling: 60,
-      defending: 85,
-      physical: 82,
-    },
-    image: null,
-  },
-  {
-    id: 'player-5',
-    name: 'Andre Williams',
-    number: 3,
-    position: 'LB',
-    country: 'gb',
-    countryName: 'England',
-    age: 23,
-    height: "5'11\"",
-    weight: '170 lbs',
-    foot: 'Left',
-    bio: 'Energetic left-back who loves to overlap and provide width.',
-    stats: {
-      pace: 86,
-      shooting: 58,
-      passing: 74,
-      dribbling: 76,
-      defending: 74,
-      physical: 72,
-    },
-    image: null,
-  },
-  // Midfielders
-  {
-    id: 'player-6',
-    name: 'Kenji Tanaka',
-    number: 7,
-    position: 'RM',
-    country: 'jp',
-    countryName: 'Japan',
-    age: 22,
-    height: "5'8\"",
-    weight: '155 lbs',
-    foot: 'Right',
-    bio: 'Tricky winger with excellent dribbling and vision.',
-    stats: {
-      pace: 88,
-      shooting: 72,
-      passing: 78,
-      dribbling: 86,
-      defending: 45,
-      physical: 58,
-    },
-    image: null,
-  },
-  {
-    id: 'player-7',
-    name: 'Samuel Okonkwo',
-    number: 8,
-    position: 'CM',
-    country: 'ng',
-    countryName: 'Nigeria',
-    age: 26,
-    height: "6'0\"",
-    weight: '178 lbs',
-    foot: 'Right',
-    bio: 'Box-to-box midfielder with incredible stamina and work rate.',
-    stats: {
-      pace: 78,
-      shooting: 70,
-      passing: 80,
-      dribbling: 76,
-      defending: 75,
-      physical: 82,
-    },
-    image: null,
-  },
-  {
-    id: 'player-8',
-    name: 'Pierre Dubois',
-    number: 6,
-    position: 'CM',
-    country: 'fr',
-    countryName: 'France',
     age: 25,
-    height: "5'11\"",
-    weight: '172 lbs',
-    foot: 'Both',
-    bio: 'Creative playmaker who dictates the tempo from deep.',
-    stats: {
-      pace: 72,
-      shooting: 68,
-      passing: 88,
-      dribbling: 82,
-      defending: 65,
-      physical: 70,
-    },
-    image: null,
-  },
-  {
-    id: 'player-9',
-    name: 'Ryan O\'Brien',
-    number: 11,
-    position: 'LM',
-    country: 'ie',
-    countryName: 'Ireland',
-    age: 24,
-    height: "5'9\"",
-    weight: '162 lbs',
-    foot: 'Left',
-    bio: 'Speedy winger who terrorizes defenses with his direct running.',
-    stats: {
-      pace: 91,
-      shooting: 74,
-      passing: 72,
-      dribbling: 84,
-      defending: 42,
-      physical: 62,
-    },
-    image: null,
-  },
-  // Strikers
-  {
-    id: 'player-10',
-    name: 'Carlos Rodriguez',
-    number: 9,
-    position: 'ST',
-    country: 'es',
-    countryName: 'Spain',
-    age: 27,
-    height: "6'0\"",
-    weight: '175 lbs',
+    height: '180 cm',
+    weight: '75 kg',
     foot: 'Right',
-    bio: 'Clinical finisher with excellent movement and heading ability.',
-    stats: {
-      pace: 82,
-      shooting: 88,
-      passing: 68,
-      dribbling: 80,
-      defending: 35,
-      physical: 76,
-    },
-    image: null,
-  },
-  {
-    id: 'player-11',
-    name: 'Jamal Sterling',
-    number: 10,
-    position: 'ST',
-    country: 'jm',
-    countryName: 'Jamaica',
-    age: 23,
-    height: "5'10\"",
-    weight: '168 lbs',
-    foot: 'Both',
-    bio: 'Young talent with blistering pace and natural goalscoring instinct.',
-    stats: {
-      pace: 93,
-      shooting: 84,
-      passing: 65,
-      dribbling: 85,
-      defending: 30,
-      physical: 68,
-    },
-    image: null,
-  },
-];
+    bio: 'Placeholder player. Add real players in the admin panel.',
+    skill_moves: 3,
+    weak_foot: 3,
+    stats: pos.stats,
+    image: placeholderImages[index % placeholderImages.length],
+    isPlaceholder: true,
+  }));
+};
 
-const MOCK_ALUMNI = [
+const PLACEHOLDER_PLAYERS = generatePlaceholderPlayers();
+
+/**
+ * Placeholder alumni/legends
+ */
+const PLACEHOLDER_ALUMNI = [
   {
-    id: 'alumni-1',
-    name: 'Roberto Santos',
+    id: 'placeholder-alumni-1',
+    name: 'John Legend',
     number: 10,
     position: 'CAM',
-    country: 'br',
-    countryName: 'Brazil',
+    country: 'gb',
+    countryName: 'England',
     yearsActive: '2015-2022',
-    bio: 'Club legend who holds the all-time scoring record. His vision and creativity defined an era.',
-    stats: {
-      pace: 78,
-      shooting: 85,
-      passing: 92,
-      dribbling: 90,
-      defending: 42,
-      physical: 65,
-    },
+    bio: 'Placeholder legend. Add real alumni in the admin panel.',
+    skill_moves: 4,
+    weak_foot: 4,
+    stats: { pace: 75, shooting: 82, passing: 88, dribbling: 85, defending: 45, physical: 68 },
     image: null,
+    isPlaceholder: true,
   },
   {
-    id: 'alumni-2',
-    name: 'Thomas Mueller',
+    id: 'placeholder-alumni-2',
+    name: 'John Legend',
     number: 1,
     position: 'GK',
-    country: 'de',
-    countryName: 'Germany',
+    country: 'gb',
+    countryName: 'England',
     yearsActive: '2012-2020',
-    bio: 'The wall. 847 saves and 52 clean sheets. A true guardian of our goal.',
-    stats: {
-      diving: 88,
-      handling: 86,
-      kicking: 82,
-      reflexes: 90,
-      gk_speed: 68,
-      gk_positioning: 88,
-    },
+    bio: 'Placeholder legend. Add real alumni in the admin panel.',
+    skill_moves: 1,
+    weak_foot: 3,
+    stats: { diving: 85, handling: 82, kicking: 78, reflexes: 88, speed: 65, positioning: 84 },
     image: null,
+    isPlaceholder: true,
   },
   {
-    id: 'alumni-3',
-    name: 'Yusuf Ibrahim',
-    number: 5,
-    position: 'CB',
-    country: 'eg',
-    countryName: 'Egypt',
-    yearsActive: '2014-2021',
-    bio: 'The rock at the back. Captain who led by example with unwavering dedication.',
-    stats: {
-      pace: 72,
-      shooting: 52,
-      passing: 68,
-      dribbling: 58,
-      defending: 91,
-      physical: 89,
-    },
-    image: null,
-  },
-  {
-    id: 'alumni-4',
-    name: 'Lee Min-ho',
-    number: 7,
-    position: 'RW',
-    country: 'kr',
-    countryName: 'South Korea',
-    yearsActive: '2016-2023',
-    bio: 'Magician on the wing. His skills and crossing created countless goals.',
-    stats: {
-      pace: 90,
-      shooting: 76,
-      passing: 84,
-      dribbling: 92,
-      defending: 38,
-      physical: 62,
-    },
-    image: null,
-  },
-  {
-    id: 'alumni-5',
-    name: 'Antonio Vargas',
+    id: 'placeholder-alumni-3',
+    name: 'John Legend',
     number: 9,
     position: 'ST',
-    country: 'ar',
-    countryName: 'Argentina',
-    yearsActive: '2013-2019',
-    bio: 'The poacher. 127 goals in 203 appearances. Always in the right place.',
-    stats: {
-      pace: 84,
-      shooting: 92,
-      passing: 70,
-      dribbling: 82,
-      defending: 28,
-      physical: 74,
-    },
+    country: 'gb',
+    countryName: 'England',
+    yearsActive: '2014-2021',
+    bio: 'Placeholder legend. Add real alumni in the admin panel.',
+    skill_moves: 4,
+    weak_foot: 5,
+    stats: { pace: 82, shooting: 88, passing: 70, dribbling: 80, defending: 30, physical: 75 },
     image: null,
+    isPlaceholder: true,
   },
 ];
 
 /**
  * Our Team page - Main component
- * Displays team hierarchy, football field formation, and alumni
+ * Displays team hierarchy, squad overview, football field formation, and alumni
  */
 class OurTeam extends Component {
   constructor(props) {
@@ -402,8 +164,6 @@ class OurTeam extends Component {
       alumni: [],
       isLoading: true,
       error: null,
-      selectedPlayer: null,
-      isModalOpen: false,
     };
   }
 
@@ -414,54 +174,51 @@ class OurTeam extends Component {
 
   fetchTeamData = async () => {
     try {
-      // Try to fetch from Supabase
+      // Fetch from Supabase using views that combine tables with profiles
       const [ownersResponse, coachesResponse, playersResponse] = await Promise.all([
-        supabase.from('team_members').select('*').eq('role', 'owner').single(),
+        // Try the team_members view first, fallback to staff table
+        supabase.from('team_members').select('*').eq('role', 'owner').limit(1).single(),
         supabase.from('team_members').select('*').eq('role', 'coach'),
-        supabase.from('players').select('*'),
+        // Use players_with_profiles view for full player data with stats as JSONB
+        supabase.from('players_with_profiles').select('*').order('number', { ascending: true }),
       ]);
+
+      // Debug logging
+      console.log('OurTeam - Players response:', playersResponse);
+      console.log('OurTeam - Players data:', playersResponse.data);
 
       // Check if we got data from the database
       const hasOwner = ownersResponse.data && !ownersResponse.error;
       const hasCoaches = coachesResponse.data && coachesResponse.data.length > 0;
       const hasPlayers = playersResponse.data && playersResponse.data.length > 0;
 
-      // Use database data if available, otherwise use mock data
+      // Separate active players from alumni
+      const activePlayers = hasPlayers
+        ? playersResponse.data.filter(p => !p.is_alumni && !p.is_retired)
+        : [];
+      const alumniPlayers = hasPlayers
+        ? playersResponse.data.filter(p => p.is_alumni || p.is_retired)
+        : [];
+
       this.setState({
-        owner: hasOwner ? ownersResponse.data : MOCK_OWNER,
-        coaches: hasCoaches ? coachesResponse.data : MOCK_COACHES,
-        players: hasPlayers
-          ? playersResponse.data.filter(p => !p.isAlumni)
-          : MOCK_PLAYERS,
-        alumni: hasPlayers
-          ? playersResponse.data.filter(p => p.isAlumni)
-          : MOCK_ALUMNI,
+        owner: hasOwner ? ownersResponse.data : PLACEHOLDER_OWNER,
+        coaches: hasCoaches ? coachesResponse.data : PLACEHOLDER_COACHES,
+        players: activePlayers.length > 0 ? activePlayers : PLACEHOLDER_PLAYERS,
+        alumni: alumniPlayers.length > 0 ? alumniPlayers : PLACEHOLDER_ALUMNI,
         isLoading: false,
       });
     } catch (error) {
-      console.warn('Error fetching team data, using mock data:', error);
-      // Fallback to mock data on error
+      console.error('Error fetching team data:', error);
+      // Show placeholder on error
       this.setState({
-        owner: MOCK_OWNER,
-        coaches: MOCK_COACHES,
-        players: MOCK_PLAYERS,
-        alumni: MOCK_ALUMNI,
+        owner: PLACEHOLDER_OWNER,
+        coaches: PLACEHOLDER_COACHES,
+        players: PLACEHOLDER_PLAYERS,
+        alumni: PLACEHOLDER_ALUMNI,
         isLoading: false,
+        error: error.message,
       });
     }
-  };
-
-  handlePlayerClick = (player) => {
-    this.setState({
-      selectedPlayer: player,
-      isModalOpen: true,
-    });
-  };
-
-  handleCloseModal = () => {
-    this.setState({
-      isModalOpen: false,
-    });
   };
 
   render() {
@@ -471,8 +228,6 @@ class OurTeam extends Component {
       players,
       alumni,
       isLoading,
-      selectedPlayer,
-      isModalOpen,
     } = this.state;
 
     if (isLoading) {
@@ -487,12 +242,15 @@ class OurTeam extends Component {
       );
     }
 
+    // Check if we have real players or just placeholders
+    const hasRealPlayers = players.some(p => !p.isPlaceholder);
+
     return (
       <div className="min-h-screen bg-surface-dark">
         {/* Hero Section */}
         <section className="relative h-[40vh] min-h-[300px] flex items-center justify-center overflow-hidden">
           {/* Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-surface-dark-elevated via-surface-dark to-surface-dark" />
+          <div className="absolute inset-0 bg-gradient-to-b from-surface-dark-elevated to-surface-dark" />
 
           {/* Decorative Elements */}
           <div className="absolute inset-0 opacity-10">
@@ -528,24 +286,17 @@ class OurTeam extends Component {
         {/* Team Hierarchy - Owner & Coaches */}
         <TeamHierarchy owner={owner} coaches={coaches} />
 
+        {/* Squad Overview - Players by Position */}
+        <SquadOverview players={players} />
+
         {/* Football Field Formation */}
         <FootballField
           players={players}
-          onPlayerClick={this.handlePlayerClick}
+          isPlaceholder={!hasRealPlayers}
         />
 
         {/* Alumni Section */}
-        <AlumniSection
-          alumni={alumni}
-          onPlayerClick={this.handlePlayerClick}
-        />
-
-        {/* Player Modal */}
-        <PlayerModal
-          player={selectedPlayer}
-          isOpen={isModalOpen}
-          onClose={this.handleCloseModal}
-        />
+        <AlumniSection alumni={alumni} />
       </div>
     );
   }

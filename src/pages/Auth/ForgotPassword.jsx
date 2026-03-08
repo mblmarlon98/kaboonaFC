@@ -58,7 +58,7 @@ class ForgotPassword extends Component {
     }
 
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-background-dark">
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 bg-surface-dark">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -116,7 +116,7 @@ class ForgotPassword extends Component {
                     name="email"
                     value={email}
                     onChange={this.handleChange}
-                    className="w-full px-4 py-3 bg-background-dark border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-accent-gold focus:ring-1 focus:ring-accent-gold transition-colors"
+                    className="w-full px-4 py-3 bg-surface-dark-elevated border border-white/20 rounded-lg text-white placeholder-white/40 focus:outline-none focus:border-accent-gold focus:ring-1 focus:ring-accent-gold transition-colors"
                     placeholder="Enter your email"
                     autoComplete="email"
                   />

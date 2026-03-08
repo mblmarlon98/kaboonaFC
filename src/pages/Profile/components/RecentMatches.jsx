@@ -120,56 +120,28 @@ class RecentMatches extends Component {
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.4 + index * 0.05 }}
             >
-              <div className="flex items-center justify-between">
-                {/* Left: Date & Opponent */}
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-white/50 w-12">
-                    {this.formatDate(match.date)}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className={`px-2 py-1 text-xs font-bold rounded border ${this.getResultStyle(match.result)}`}>
-                      {match.result}
-                    </span>
-                    <span className="text-white font-medium">{match.opponent}</span>
-                  </div>
+              <div className="flex items-center">
+                {/* Date */}
+                <div className="text-sm text-white/50 w-14 shrink-0">
+                  {this.formatDate(match.date)}
                 </div>
 
-                {/* Center: Score */}
-                <div className="text-lg font-display font-bold text-white">
+                {/* Result */}
+                <span className={`px-2 py-1 text-xs font-bold rounded border shrink-0 ${this.getResultStyle(match.result)}`}>
+                  {match.result}
+                </span>
+
+                {/* Opponent */}
+                <span className="text-white font-medium truncate flex-1 mx-3">{match.opponent}</span>
+
+                {/* Score */}
+                <div className="text-lg font-display font-bold text-white w-16 text-right shrink-0">
                   {match.score}
                 </div>
 
-                {/* Right: Performance */}
-                <div className="flex items-center gap-4">
-                  {/* Goals/Assists */}
-                  <div className="flex items-center gap-3 text-sm">
-                    {match.goals > 0 && (
-                      <span className="flex items-center gap-1 text-green-400">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <circle cx="12" cy="12" r="10" />
-                        </svg>
-                        {match.goals}
-                      </span>
-                    )}
-                    {match.assists > 0 && (
-                      <span className="flex items-center gap-1 text-blue-400">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        {match.assists}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Minutes Played */}
-                  <div className="text-sm text-white/50 hidden sm:block">
-                    {match.minutesPlayed}'
-                  </div>
-
-                  {/* Rating */}
-                  <div className={`px-3 py-1 rounded-lg font-bold text-sm ${this.getRatingColor(match.rating)}`}>
-                    {match.rating.toFixed(1)}
-                  </div>
+                {/* Rating */}
+                <div className={`px-3 py-1 rounded-lg font-bold text-sm ml-4 shrink-0 ${this.getRatingColor(match.rating)}`}>
+                  {match.rating.toFixed(1)}
                 </div>
               </div>
             </motion.div>

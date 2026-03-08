@@ -1,11 +1,14 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
+import { PlayerModalContext } from '../../../components/shared/PlayerModalContext';
 
 /**
  * Team Hierarchy section showing Owner and Coaches
- * Owner at top with crown icon, coaches below connected with tree lines
+ * Owner at top with crown icon and FIFA icon-style card (white/cream like legends)
+ * Coaches below connected with tree lines
  */
 class TeamHierarchy extends Component {
+  static contextType = PlayerModalContext;
   constructor(props) {
     super(props);
     this.state = {
@@ -21,9 +24,26 @@ class TeamHierarchy extends Component {
     this.setState({ hoveredId: null });
   };
 
+  handleOwnerClick = (owner) => {
+    if (owner.isPlaceholder) return;
+
+    const { openPlayerModal } = this.context || {};
+    if (openPlayerModal) {
+      // Convert owner to player-like format for modal
+      const ownerAsPlayer = {
+        ...owner,
+        position: 'Owner',
+        number: '',
+        isOwner: true,
+      };
+      openPlayerModal(ownerAsPlayer);
+    }
+  };
+
   renderOwnerCard = (owner) => {
     const { hoveredId } = this.state;
     const isHovered = hoveredId === owner.id;
+    const isClickable = !owner.isPlaceholder;
 
     return (
       <motion.div
@@ -34,36 +54,62 @@ class TeamHierarchy extends Component {
         className="relative"
       >
         <motion.div
-          className="relative mx-auto max-w-md"
+          className={`relative mx-auto max-w-md ${isClickable ? 'cursor-pointer' : ''}`}
           onMouseEnter={() => this.handleMouseEnter(owner.id)}
           onMouseLeave={this.handleMouseLeave}
+          onClick={() => this.handleOwnerClick(owner)}
           whileHover={{ y: -5 }}
         >
-          {/* Gold Border Card */}
+          {/* FIFA Icon-style Card - Cream/White like Legends */}
           <div
             className={`relative p-1 rounded-2xl transition-all duration-300 ${
               isHovered
-                ? 'shadow-[0_0_40px_rgba(212,175,55,0.5)]'
-                : 'shadow-[0_0_20px_rgba(212,175,55,0.2)]'
+                ? 'shadow-[0_0_40px_rgba(255,254,240,0.6)]'
+                : 'shadow-[0_0_20px_rgba(255,254,240,0.3)]'
             }`}
             style={{
-              background: 'linear-gradient(135deg, #D4AF37 0%, #B8972E 50%, #E5C158 100%)',
+              background: 'linear-gradient(135deg, #F5F5DC 0%, #E8E4C9 25%, #FFFEF0 50%, #E8E4C9 75%, #F5F5DC 100%)',
             }}
           >
-            <div className="bg-surface-dark-elevated rounded-xl overflow-hidden">
+            <div className="bg-surface-dark-elevated rounded-xl overflow-hidden relative">
+              {/* Decorative Icon Pattern */}
+              <svg
+                className="absolute inset-0 w-full h-full opacity-10 pointer-events-none"
+                viewBox="0 0 100 140"
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="ownerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#E8E4C9" stopOpacity="0.8" />
+                    <stop offset="50%" stopColor="#D4CEB8" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="#E8E4C9" stopOpacity="0.8" />
+                  </linearGradient>
+                </defs>
+                <path d="M-10,70 Q30,30 50,70 T110,70" fill="none" stroke="url(#ownerGradient)" strokeWidth="0.5" />
+                <path d="M-10,80 Q30,40 50,80 T110,80" fill="none" stroke="url(#ownerGradient)" strokeWidth="0.3" />
+                <circle cx="10" cy="10" r="8" fill="none" stroke="url(#ownerGradient)" strokeWidth="0.3" />
+                <circle cx="90" cy="10" r="8" fill="none" stroke="url(#ownerGradient)" strokeWidth="0.3" />
+              </svg>
+
               {/* Crown Icon */}
               <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
-                <div className="w-12 h-12 flex items-center justify-center bg-accent-gold rounded-full shadow-lg">
-                  <svg className="w-7 h-7 text-black" fill="currentColor" viewBox="0 0 24 24">
+                <div
+                  className="w-12 h-12 flex items-center justify-center rounded-full shadow-lg"
+                  style={{ background: 'linear-gradient(135deg, #F5F5DC 0%, #E8E4C9 100%)' }}
+                >
+                  <svg className="w-7 h-7 text-surface-dark" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M2.5 19h19v2h-19v-2zm1.75-6.5l3.75 3.75L12 12l4 4.25 3.75-3.75L21 15l-1.5 3h-15L3 15l1.25-2.5zM12 2l4.5 7.5H7.5L12 2z" />
                   </svg>
                 </div>
               </div>
 
               {/* Content */}
-              <div className="pt-8 pb-6 px-6 text-center">
+              <div className="pt-8 pb-6 px-6 text-center relative">
                 {/* Avatar */}
-                <div className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4 border-accent-gold">
+                <div
+                  className="w-32 h-32 mx-auto mb-4 rounded-full overflow-hidden border-4"
+                  style={{ borderColor: '#E8E4C9' }}
+                >
                   {owner.image ? (
                     <img
                       src={owner.image}
@@ -71,8 +117,11 @@ class TeamHierarchy extends Component {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-accent-gold to-accent-gold-dark flex items-center justify-center">
-                      <span className="text-4xl font-display font-bold text-black">
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ background: 'linear-gradient(135deg, #F5F5DC 0%, #E8E4C9 100%)' }}
+                    >
+                      <span className="text-4xl font-display font-bold text-surface-dark">
                         {owner.name.charAt(0)}
                       </span>
                     </div>
@@ -80,7 +129,10 @@ class TeamHierarchy extends Component {
                 </div>
 
                 {/* Info */}
-                <span className="inline-block px-3 py-1 mb-2 text-xs font-semibold uppercase tracking-wider bg-accent-gold/20 text-accent-gold rounded-full">
+                <span
+                  className="inline-block px-3 py-1 mb-2 text-xs font-semibold uppercase tracking-wider rounded-full"
+                  style={{ background: 'rgba(232, 228, 201, 0.2)', color: '#E8E4C9' }}
+                >
                   Team Owner
                 </span>
                 <h3 className="text-2xl font-display font-bold text-white mb-2">
@@ -251,7 +303,7 @@ class TeamHierarchy extends Component {
     const { owner, coaches } = this.props;
 
     return (
-      <section className="py-16 px-4 relative">
+      <section className="py-16 px-4 relative bg-surface-dark">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-5">
           <div

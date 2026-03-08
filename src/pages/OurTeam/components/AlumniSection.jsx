@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
-import PlayerCard from './PlayerCard';
+import PlayerFIFACard from '../../../components/shared/PlayerFIFACard';
 
 /**
  * Alumni/Legends section with horizontal carousel
@@ -68,8 +68,6 @@ class AlumniSection extends Component {
   };
 
   renderAlumniCard = (player, index) => {
-    const { onPlayerClick } = this.props;
-
     return (
       <motion.div
         key={player.id}
@@ -79,30 +77,18 @@ class AlumniSection extends Component {
         transition={{ duration: 0.5, delay: index * 0.1 }}
         className="flex-shrink-0"
       >
-        {/* Sepia/Greyscale wrapper */}
         <div className="relative group">
-          {/* Sepia overlay */}
-          <div className="filter sepia brightness-75 grayscale-[30%] group-hover:sepia-0 group-hover:brightness-100 group-hover:grayscale-0 transition-all duration-500">
-            <PlayerCard
-              player={player}
-              size="normal"
-              onClick={onPlayerClick}
-            />
-          </div>
-
-          {/* "Legend" badge */}
-          <div className="absolute -top-2 -right-2 z-10">
-            <div className="w-8 h-8 bg-accent-gold rounded-full flex items-center justify-center shadow-lg">
-              <svg className="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </div>
-          </div>
+          {/* FIFA Icon Card Style */}
+          <PlayerFIFACard
+            player={player}
+            size="sm"
+            isIcon={true}
+          />
 
           {/* Years active badge */}
           {player.yearsActive && (
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-[10px] bg-black/80 text-accent-gold px-2 py-1 rounded-full whitespace-nowrap">
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 z-10">
+              <span className="text-[10px] bg-gradient-to-r from-amber-600 to-amber-500 text-black font-bold px-3 py-1 rounded-full whitespace-nowrap shadow-lg">
                 {player.yearsActive}
               </span>
             </div>

@@ -50,6 +50,7 @@ class Navbar extends Component {
     const { darkMode, toggleDarkMode, user } = this.props;
     const { isScrolled, isMobileMenuOpen } = this.state;
 
+    // Base navigation links
     const navLinks = [
       { to: '/', label: 'Home' },
       { to: '/our-team', label: 'Our Team' },
@@ -59,11 +60,16 @@ class Navbar extends Component {
       { to: '/investors', label: 'Investors' },
     ];
 
+    // Add Coaching Zone for coaches/owners (for demo, show to all logged-in users)
+    if (user) {
+      navLinks.push({ to: '/coaching-zone', label: 'Coaching Zone' });
+    }
+
     return (
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-surface-dark/90 dark:bg-surface-dark/90 backdrop-blur-md shadow-lg'
+            ? 'bg-surface-light/90 dark:bg-surface-dark/90 backdrop-blur-md shadow-lg'
             : 'bg-transparent'
         }`}
       >
@@ -86,7 +92,7 @@ class Navbar extends Component {
                     `px-4 py-2 text-sm font-medium transition-colors duration-200 ${
                       isActive
                         ? 'text-accent-gold'
-                        : 'text-white/80 hover:text-white'
+                        : 'text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white'
                     }`
                   }
                 >
@@ -100,7 +106,7 @@ class Navbar extends Component {
               {/* Dark Mode Toggle */}
               <motion.button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                 whileTap={{ scale: 0.95 }}
                 aria-label="Toggle dark mode"
               >
@@ -165,7 +171,7 @@ class Navbar extends Component {
                 <div className="flex items-center space-x-2">
                   <Link
                     to="/login"
-                    className="px-4 py-2 text-sm font-medium text-white/80 hover:text-white transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white transition-colors"
                   >
                     Login
                   </Link>
@@ -184,7 +190,7 @@ class Navbar extends Component {
               {/* Dark Mode Toggle - Mobile */}
               <motion.button
                 onClick={toggleDarkMode}
-                className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-full text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                 whileTap={{ scale: 0.95 }}
                 aria-label="Toggle dark mode"
               >
@@ -222,7 +228,7 @@ class Navbar extends Component {
               {/* Hamburger Button */}
               <button
                 onClick={this.toggleMobileMenu}
-                className="p-2 rounded-md text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-md text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                 aria-label="Toggle menu"
               >
                 <svg
@@ -260,7 +266,7 @@ class Navbar extends Component {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="md:hidden bg-surface-dark/95 backdrop-blur-md border-t border-white/10"
+              className="md:hidden bg-surface-light/95 dark:bg-surface-dark/95 backdrop-blur-md border-t border-black/10 dark:border-white/10"
             >
               <div className="px-4 py-4 space-y-1">
                 {navLinks.map((link) => (
@@ -271,8 +277,8 @@ class Navbar extends Component {
                     className={({ isActive }) =>
                       `block px-4 py-3 text-base font-medium rounded-md transition-colors ${
                         isActive
-                          ? 'text-accent-gold bg-white/5'
-                          : 'text-white/80 hover:text-white hover:bg-white/5'
+                          ? 'text-accent-gold bg-black/5 dark:bg-white/5'
+                          : 'text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
                       }`
                     }
                   >

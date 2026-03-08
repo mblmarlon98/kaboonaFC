@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(supabase:*)",
+      "Bash(docker info:*)",
+      "Bash(open:*)",
+      "Bash(docker ps:*)",
+      "Bash(npm run dev:*)",
+      "Bash(curl:*)",
+      "Bash(python3:*)",
+      "Bash(SERVICE_KEY=\"eyJhbGciOiJFUzI1NiIsImtpZCI6ImI4MTI2OWYxLTIxZDgtNGYyZS1iNzE5LWMyMjQwYTg0MGQ5MCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MjA4NTc0NjU4NH0.XbmO2OrXm55tK-oElhkMP_KTF3rGPbQa5LoXjR9RCA_cDnGZZcTgAD15OeA3-VIMC4ydLml2odklom_Z_TexLg\")",
+      "Bash(ANON_KEY=\"eyJhbGciOiJFUzI1NiIsImtpZCI6ImI4MTI2OWYxLTIxZDgtNGYyZS1iNzE5LWMyMjQwYTg0MGQ5MCIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjIwODU3NDY0MTF9.c-UEqGJ_5We6FwgJS_4j4IoqiGi13eExqIvHpJzlbFL5j8SH4GT1iqlxrQ5nZ-qaoW-EdP5WmhPO0WbVaEZGdA\")",
+      "Bash(__NEW_LINE_38d6049848362bb9__ curl -s -X POST \"http://127.0.0.1:54331/auth/v1/admin/users\" -H \"Authorization: Bearer $SERVICE_KEY\" -H \"apikey: $ANON_KEY\" -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test@test.com\"\",\"\"password\"\":\"\"password123\"\",\"\"email_confirm\"\":true}')",
+      "Bash(psql:*)"
+    ]
+  }
+}

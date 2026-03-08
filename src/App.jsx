@@ -10,10 +10,14 @@ import FanPortal from './pages/FanPortal';
 import Investors from './pages/Investors';
 import TrainingSignup from './pages/TrainingSignup';
 import { Login, Register, ForgotPassword } from './pages/Auth';
+import AuthCallback from './pages/Auth/AuthCallback';
 import { Profile, ProfileEdit } from './pages/Profile';
 import Admin from './pages/Admin';
+import CoachingZone from './pages/CoachingZone/CoachingZone';
+import PlayerProfile from './pages/PlayerProfile';
 import ProtectedRoute from './components/ProtectedRoute';
-import { onAuthStateChange, getSession } from './services/auth';
+import PlayerModalProvider from './components/shared/PlayerModalContext';
+import { onAuthStateChange, getSession, getCurrentUser } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 
 // Placeholder pages
@@ -54,21 +58,32 @@ class App extends Component {
     // Get initial session
     const { session } = await getSession();
     if (session) {
-      setUser(session.user);
+      // Get fresh user data from server (includes latest metadata like avatar_url)
+      const { user } = await getCurrentUser();
+      setUser(user || session.user);
       setSession(session);
     }
     setLoading(false);
 
     // Subscribe to auth changes
-    this.authSubscription = onAuthStateChange((event, session) => {
+    this.authSubscription = onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        setUser(session.user);
+        // Get fresh user data on sign in
+        const { user } = await getCurrentUser();
+        setUser(user || session.user);
         setSession(session);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
         setSession(null);
       } else if (event === 'TOKEN_REFRESHED' && session) {
+        // Refresh user data when token refreshes
+        const { user } = await getCurrentUser();
+        setUser(user || session.user);
         setSession(session);
+      } else if (event === 'USER_UPDATED' && session) {
+        // Handle user metadata updates
+        const { user } = await getCurrentUser();
+        setUser(user || session.user);
       }
     });
   }
@@ -96,15 +111,17 @@ class App extends Component {
     const { user } = this.props;
 
     return (
-      <Layout
-        darkMode={darkMode}
-        toggleDarkMode={this.toggleDarkMode}
-        user={user}
-      >
-        <Routes>
+      <PlayerModalProvider>
+        <Layout
+          darkMode={darkMode}
+          toggleDarkMode={this.toggleDarkMode}
+          user={user}
+        >
+          <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/our-team" element={<OurTeam />} />
+          <Route path="/player/:playerId" element={<PlayerProfile />} />
           <Route path="/stats" element={<Stats />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/fan-portal" element={<FanPortal />} />
@@ -114,6 +131,7 @@ class App extends Component {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/training-signup" element={<TrainingSignup />} />
 
           {/* Protected Routes */}
@@ -144,6 +162,16 @@ class App extends Component {
             }
           />
 
+          {/* Coaching Zone - Protected with role check inside component */}
+          <Route
+            path="/coaching-zone"
+            element={
+              <ProtectedRoute>
+                <CoachingZone />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Legal Routes */}
           <Route path="/terms" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Terms & Conditions</h1></div>} />
           <Route path="/privacy" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Privacy Policy</h1></div>} />
@@ -152,8 +180,9 @@ class App extends Component {
 
           {/* 404 */}
           <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Layout>
+          </Routes>
+        </Layout>
+      </PlayerModalProvider>
     );
   }
 }

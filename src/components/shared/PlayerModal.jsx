@@ -1,16 +1,14 @@
 import React, { Component } from 'react';
+import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import PlayerCard from './PlayerCard';
-import {
-  getCardTier,
-  calculateOverall,
-  renderStars,
-  getStreakThreshold,
-} from '../../../utils/cardTiers';
+import PlayerFIFACard from './PlayerFIFACard';
 
 /**
- * Player detail modal with full stats, bio, skill moves, weak foot, and streak progress
+ * Shared Player detail modal with full stats, bio, skill moves, weak foot, and streak progress
  * Mobile-optimized layout
+ * Shows View Profile button for all players
+ * Shows Edit Profile only if viewing own profile
  */
 class PlayerModal extends Component {
   constructor(props) {
@@ -50,6 +48,16 @@ class PlayerModal extends Component {
     }
   };
 
+  calculateOverall = (stats, position) => {
+    if (!stats) return 70;
+    if (position === 'GK') {
+      const { diving = 70, handling = 70, kicking = 70, reflexes = 70, speed = 70, positioning = 70 } = stats;
+      return Math.round((diving + handling + kicking + reflexes + speed + positioning) / 6);
+    }
+    const { pace = 70, shooting = 70, passing = 70, dribbling = 70, defending = 70, physical = 70 } = stats;
+    return Math.round((pace + shooting + passing + dribbling + defending + physical) / 6);
+  };
+
   getStatConfig = () => {
     const { player } = this.props;
     if (player.position === 'GK') {
@@ -58,8 +66,8 @@ class PlayerModal extends Component {
         { label: 'Handling', key: 'handling', icon: 'HAN' },
         { label: 'Kicking', key: 'kicking', icon: 'KIC' },
         { label: 'Reflexes', key: 'reflexes', icon: 'REF' },
-        { label: 'Speed', key: 'gk_speed', icon: 'SPD' },
-        { label: 'Positioning', key: 'gk_positioning', icon: 'POS' },
+        { label: 'Speed', key: 'speed', icon: 'SPD' },
+        { label: 'Positioning', key: 'positioning', icon: 'POS' },
       ];
     }
     return [
@@ -89,15 +97,14 @@ class PlayerModal extends Component {
   };
 
   renderStarRating = (count, label) => {
-    const stars = renderStars(count);
     return (
       <div className="flex flex-col items-center">
         <span className="text-xs text-gray-400 uppercase mb-1">{label}</span>
         <div className="flex gap-1">
-          {stars.map((star) => (
+          {Array.from({ length: 5 }, (_, i) => (
             <svg
-              key={star.index}
-              className={`w-4 h-4 ${star.filled ? 'text-accent-gold' : 'text-gray-600'}`}
+              key={i}
+              className={`w-4 h-4 ${i < count ? 'text-accent-gold' : 'text-gray-600'}`}
               fill="currentColor"
               viewBox="0 0 20 20"
             >
@@ -112,8 +119,8 @@ class PlayerModal extends Component {
   renderStreakProgress = () => {
     const { player } = this.props;
     const streak = player.streak || { current: 0, threshold: 5, recentIncrease: false };
-    const overall = calculateOverall(player.stats, player.position);
-    const threshold = streak.threshold || getStreakThreshold(overall);
+    const overall = this.calculateOverall(player.stats, player.position);
+    const threshold = streak.threshold || (overall >= 90 ? 10 : overall >= 85 ? 8 : overall >= 80 ? 7 : overall >= 75 ? 6 : 5);
     const progressPercent = Math.min((streak.current / threshold) * 100, 100);
 
     return (
@@ -132,7 +139,6 @@ class PlayerModal extends Component {
           )}
         </div>
 
-        {/* Progress bar */}
         <div className="relative h-3 bg-surface-dark-elevated rounded-full overflow-hidden mb-2">
           <motion.div
             initial={{ width: 0 }}
@@ -142,7 +148,6 @@ class PlayerModal extends Component {
               streak.current >= 3 ? 'bg-gradient-to-r from-orange-500 to-red-500' : 'bg-accent-gold'
             }`}
           />
-          {/* Fire indicator for active streak */}
           {streak.current >= 3 && (
             <motion.span
               className="absolute right-1 top-1/2 -translate-y-1/2 text-xs"
@@ -154,7 +159,6 @@ class PlayerModal extends Component {
           )}
         </div>
 
-        {/* Progress text */}
         <div className="flex justify-between text-xs text-gray-400">
           <span>{streak.current} good performances</span>
           <span>{threshold - streak.current} more to rating increase</span>
@@ -168,8 +172,7 @@ class PlayerModal extends Component {
 
     if (!player) return null;
 
-    const overall = calculateOverall(player.stats, player.position);
-    const tier = getCardTier(overall);
+    const overall = this.calculateOverall(player.stats, player.position);
     const statConfig = this.getStatConfig();
     const skillMoves = player.skill_moves || 3;
     const weakFoot = player.weak_foot || 3;
@@ -214,7 +217,13 @@ class PlayerModal extends Component {
               <div className="flex flex-col md:flex-row">
                 {/* Left Side - Player Card */}
                 <div className="flex-shrink-0 p-4 sm:p-8 flex items-center justify-center bg-gradient-to-br from-surface-dark to-surface-dark-elevated">
-                  <PlayerCard player={player} size="large" />
+                  <PlayerFIFACard
+                    player={player}
+                    size="lg"
+                    showStats={!player.isOwner}
+                    showSkillsAndWF={!player.isOwner}
+                    isIcon={player.isOwner}
+                  />
                 </div>
 
                 {/* Right Side - Details */}
@@ -222,15 +231,17 @@ class PlayerModal extends Component {
                   {/* Header */}
                   <div className="mb-4 sm:mb-6">
                     <div className="flex items-center gap-3 sm:gap-4 mb-2">
-                      <span className="text-4xl sm:text-5xl font-display font-bold text-accent-gold">
-                        {overall}
-                      </span>
+                      {!player.isOwner && (
+                        <span className="text-4xl sm:text-5xl font-display font-bold text-accent-gold">
+                          {overall}
+                        </span>
+                      )}
                       <div>
                         <h2 className="text-2xl sm:text-3xl font-display font-bold text-white">
                           {player.name}
                         </h2>
                         <p className="text-sm sm:text-base text-gray-400">
-                          {player.position} | #{player.number}
+                          {player.isOwner ? 'Team Owner' : `${player.position} | #${player.number}${player.foot ? ` | ${player.foot.charAt(0).toUpperCase() + player.foot.slice(1)} Foot` : ''}`}
                         </p>
                       </div>
                     </div>
@@ -249,45 +260,64 @@ class PlayerModal extends Component {
                     )}
                   </div>
 
-                  {/* Skill Moves & Weak Foot */}
-                  <div className="flex justify-around mb-4 sm:mb-6 p-3 sm:p-4 bg-surface-dark rounded-lg">
-                    {this.renderStarRating(skillMoves, 'Skill Moves')}
-                    <div className="w-px bg-gray-700" />
-                    {this.renderStarRating(weakFoot, 'Weak Foot')}
-                  </div>
-
-                  {/* Streak Progress */}
-                  {player.streak && this.renderStreakProgress()}
-
-                  {/* Stats Grid */}
-                  <div className="mb-4 sm:mb-6 mt-4">
-                    <h3 className="text-base sm:text-lg font-display text-accent-gold mb-3 sm:mb-4 uppercase tracking-wider">
-                      Attributes
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      {statConfig.map((stat) => {
-                        const value = player.stats[stat.key];
-                        return (
-                          <div key={stat.key} className="space-y-1">
-                            <div className="flex justify-between items-center">
-                              <span className="text-xs sm:text-sm text-gray-400">{stat.label}</span>
-                              <span className={`text-base sm:text-lg font-bold ${this.getStatColor(value)}`}>
-                                {value}
-                              </span>
-                            </div>
-                            <div className="h-2 bg-surface-dark rounded-full overflow-hidden">
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: `${value}%` }}
-                                transition={{ delay: 0.2, duration: 0.5 }}
-                                className={`h-full ${this.getStatBarColor(value)}`}
-                              />
-                            </div>
-                          </div>
-                        );
-                      })}
+                  {/* Skill Moves & Weak Foot - Not shown for owners */}
+                  {!player.isOwner && (
+                    <div className="flex justify-around mb-4 sm:mb-6 p-3 sm:p-4 bg-surface-dark rounded-lg">
+                      {this.renderStarRating(skillMoves, 'Skill Moves')}
+                      <div className="w-px bg-gray-700" />
+                      {this.renderStarRating(weakFoot, 'Weak Foot')}
                     </div>
-                  </div>
+                  )}
+
+                  {/* Streak Progress - Not shown for owners */}
+                  {!player.isOwner && player.streak && this.renderStreakProgress()}
+
+                  {/* Stats Grid - Not shown for owners */}
+                  {!player.isOwner && player.stats && (
+                    <div className="mb-4 sm:mb-6 mt-4">
+                      <h3 className="text-base sm:text-lg font-display text-accent-gold mb-3 sm:mb-4 uppercase tracking-wider">
+                        Attributes
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                        {statConfig.map((stat) => {
+                          const value = player.stats?.[stat.key] || 70;
+                          return (
+                            <div key={stat.key} className="space-y-1">
+                              <div className="flex justify-between items-center">
+                                <span className="text-xs sm:text-sm text-gray-400">{stat.label}</span>
+                                <span className={`text-base sm:text-lg font-bold ${this.getStatColor(value)}`}>
+                                  {value}
+                                </span>
+                              </div>
+                              <div className="h-2 bg-surface-dark rounded-full overflow-hidden">
+                                <motion.div
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${value}%` }}
+                                  transition={{ delay: 0.2, duration: 0.5 }}
+                                  className={`h-full ${this.getStatBarColor(value)}`}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Owner Role Description */}
+                  {player.isOwner && (
+                    <div className="mb-4 sm:mb-6 p-4 bg-surface-dark rounded-lg text-center">
+                      <div className="flex items-center justify-center gap-2 mb-2">
+                        <svg className="w-6 h-6 text-accent-gold" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M2.5 19h19v2h-19v-2zm1.75-6.5l3.75 3.75L12 12l4 4.25 3.75-3.75L21 15l-1.5 3h-15L3 15l1.25-2.5zM12 2l4.5 7.5H7.5L12 2z" />
+                        </svg>
+                        <span className="text-lg font-display font-bold text-accent-gold">Team Owner</span>
+                      </div>
+                      <p className="text-sm text-gray-400">
+                        Founder and owner of Kaboona FC
+                      </p>
+                    </div>
+                  )}
 
                   {/* Bio */}
                   {player.bio && (
@@ -303,14 +333,25 @@ class PlayerModal extends Component {
 
                   {/* Additional Info */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
-                    {player.age && (
+                    {player.position && (
                       <div className="text-center p-2 sm:p-3 bg-surface-dark rounded-lg">
                         <span className="block text-xl sm:text-2xl font-display font-bold text-accent-gold">
-                          {player.age}
+                          {player.position}
                         </span>
-                        <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Age</span>
+                        {player.alternate_positions && player.alternate_positions.length > 0 && (
+                          <span className="block text-xs text-gray-500 mt-0.5">
+                            {player.alternate_positions.join(', ')}
+                          </span>
+                        )}
+                        <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Position</span>
                       </div>
                     )}
+                    <div className="text-center p-2 sm:p-3 bg-surface-dark rounded-lg">
+                      <span className="block text-xl sm:text-2xl font-display font-bold text-accent-gold">
+                        {player.foot ? (player.foot.charAt(0).toUpperCase() + player.foot.slice(1)) : 'Right'}
+                      </span>
+                      <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Foot</span>
+                    </div>
                     {player.height && (
                       <div className="text-center p-2 sm:p-3 bg-surface-dark rounded-lg">
                         <span className="block text-xl sm:text-2xl font-display font-bold text-accent-gold">
@@ -319,20 +360,12 @@ class PlayerModal extends Component {
                         <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Height</span>
                       </div>
                     )}
-                    {player.weight && (
+                    {player.age && (
                       <div className="text-center p-2 sm:p-3 bg-surface-dark rounded-lg">
                         <span className="block text-xl sm:text-2xl font-display font-bold text-accent-gold">
-                          {player.weight}
+                          {player.age}
                         </span>
-                        <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Weight</span>
-                      </div>
-                    )}
-                    {player.foot && (
-                      <div className="text-center p-2 sm:p-3 bg-surface-dark rounded-lg">
-                        <span className="block text-xl sm:text-2xl font-display font-bold text-accent-gold capitalize">
-                          {player.foot}
-                        </span>
-                        <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Foot</span>
+                        <span className="text-[10px] sm:text-xs text-gray-400 uppercase">Age</span>
                       </div>
                     )}
                   </div>
@@ -344,6 +377,9 @@ class PlayerModal extends Component {
                       <span className="text-accent-gold font-display font-bold">{player.yearsActive}</span>
                     </div>
                   )}
+
+                  {/* Profile Actions */}
+                  {this.renderProfileActions()}
                 </div>
               </div>
             </motion.div>
@@ -352,6 +388,48 @@ class PlayerModal extends Component {
       </AnimatePresence>
     );
   }
+
+  renderProfileActions = () => {
+    const { player, currentUser, onClose } = this.props;
+
+    // Check if this player is the currently logged in user
+    const isOwnProfile = currentUser && player && (
+      player.user_id === currentUser.id ||
+      player.id === currentUser.id ||
+      player.email === currentUser.email
+    );
+
+    // Don't show profile actions for placeholder players
+    if (player?.isPlaceholder) return null;
+
+    return (
+      <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        {/* View Profile Button - Always shown for real players */}
+        <Link
+          to={`/player/${player.id}`}
+          onClick={onClose}
+          className="flex-1 py-3 px-6 bg-accent-gold text-black font-bold rounded-lg text-center hover:bg-accent-gold/90 transition-colors"
+        >
+          View Profile
+        </Link>
+
+        {/* Edit Profile - Only shown if it's the user's own profile */}
+        {isOwnProfile && (
+          <Link
+            to="/profile/edit"
+            onClick={onClose}
+            className="flex-1 py-3 px-6 bg-surface-dark border border-accent-gold/50 text-accent-gold font-bold rounded-lg text-center hover:bg-accent-gold/10 transition-colors"
+          >
+            Edit Profile
+          </Link>
+        )}
+      </div>
+    );
+  };
 }
 
-export default PlayerModal;
+const mapStateToProps = (state) => ({
+  currentUser: state.auth?.user,
+});
+
+export default connect(mapStateToProps)(PlayerModal);
