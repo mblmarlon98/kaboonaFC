@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import { Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import TrainingScheduler from './components/TrainingScheduler';
+import MatchScheduler from './components/MatchScheduler';
 import FormationBuilder from './components/FormationBuilder';
 import SquadSelection from './components/SquadSelection';
 import MatchEvaluation from './components/MatchEvaluation';
@@ -16,6 +17,7 @@ class CoachingZone extends Component {
     super(props);
     this.state = {
       activeTab: 'schedule',
+      scheduleSubTab: 'training',
     };
   }
 
@@ -25,6 +27,10 @@ class CoachingZone extends Component {
 
   setActiveTab = (tab) => {
     this.setState({ activeTab: tab });
+  };
+
+  setScheduleSubTab = (subTab) => {
+    this.setState({ scheduleSubTab: subTab });
   };
 
   getCoachName = () => {
@@ -91,7 +97,7 @@ class CoachingZone extends Component {
 
   render() {
     const { user, loading, userRole } = this.props;
-    const { activeTab } = this.state;
+    const { activeTab, scheduleSubTab } = this.state;
 
     // Show loading state
     if (loading) {
@@ -200,7 +206,34 @@ class CoachingZone extends Component {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
           >
-            {activeTab === 'schedule' && <TrainingScheduler />}
+            {activeTab === 'schedule' && (
+              <div className="space-y-8">
+                <div className="flex gap-3 mb-6">
+                  <button
+                    onClick={() => this.setScheduleSubTab('training')}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      scheduleSubTab === 'training'
+                        ? 'bg-accent-gold text-black shadow-lg shadow-accent-gold/20'
+                        : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    Training
+                  </button>
+                  <button
+                    onClick={() => this.setScheduleSubTab('match')}
+                    className={`px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                      scheduleSubTab === 'match'
+                        ? 'bg-accent-gold text-black shadow-lg shadow-accent-gold/20'
+                        : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    Matches
+                  </button>
+                </div>
+                {scheduleSubTab === 'training' && <TrainingScheduler />}
+                {scheduleSubTab === 'match' && <MatchScheduler />}
+              </div>
+            )}
             {activeTab === 'formation' && <FormationBuilder />}
             {activeTab === 'squad' && <SquadSelection />}
             {activeTab === 'evaluation' && <MatchEvaluation />}
