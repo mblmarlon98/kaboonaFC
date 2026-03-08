@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
+import DrillSuggestions from './DrillSuggestions';
 import {
   createTrainingSession,
   sendInvitations,
@@ -554,6 +555,25 @@ class TrainingScheduler extends Component {
                 <div className="mt-3 pt-3 border-t border-white/5">
                   {this.renderPlayerResponses(invitations)}
                 </div>
+
+                {/* Drill suggestions based on accepted players */}
+                {invitations.filter((i) => i.status === 'accepted').length > 0 && (
+                  <div className="mt-4 pt-4 border-t border-white/5">
+                    <h4 className="text-sm font-bold text-white mb-3 flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-lg bg-accent-gold/10 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                      </div>
+                      Suggested Drills
+                    </h4>
+                    <DrillSuggestions
+                      acceptedPlayers={invitations
+                        .filter((i) => i.status === 'accepted')
+                        .map((i) => ({ position: i.players?.position || null }))}
+                    />
+                  </div>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
