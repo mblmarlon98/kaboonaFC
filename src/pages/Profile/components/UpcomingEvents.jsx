@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getMyInvitations, respondToInvitation } from '../../../services/schedulingService';
+import CheckInButton from './CheckInButton';
 
 /**
  * UpcomingEvents component for the Player Profile
@@ -109,6 +110,21 @@ class UpcomingEvents extends Component {
     return invitation.event.location;
   };
 
+  getEventVenueCoords = (invitation) => {
+    if (!invitation.event) return { lat: null, lng: null };
+    return {
+      lat: invitation.event.location_lat || null,
+      lng: invitation.event.location_lng || null,
+    };
+  };
+
+  isEventToday = (invitation) => {
+    const eventDate = this.getEventDate(invitation);
+    if (!eventDate) return false;
+    const today = new Date().toISOString().split('T')[0];
+    return eventDate === today;
+  };
+
   getEventTitle = (invitation) => {
     if (!invitation.event) return 'Unknown Event';
     if (invitation.event_type === 'match') {
@@ -213,6 +229,8 @@ class UpcomingEvents extends Component {
     const location = this.getEventLocation(invitation);
     const badge = this.getEventTypeBadge(invitation);
     const isTraining = invitation.event_type === 'training';
+    const venueCoords = this.getEventVenueCoords(invitation);
+    const showCheckIn = invitation.status === 'accepted';
 
     return (
       <motion.div
@@ -311,6 +329,17 @@ class UpcomingEvents extends Component {
                 </span>
               )}
             </div>
+
+            {/* GPS Check-In button for accepted events */}
+            {showCheckIn && (
+              <CheckInButton
+                eventType={invitation.event_type}
+                eventId={invitation.event_id}
+                eventDate={date}
+                venueLat={venueCoords.lat}
+                venueLng={venueCoords.lng}
+              />
+            )}
           </div>
 
           {/* Action buttons / status badge */}
