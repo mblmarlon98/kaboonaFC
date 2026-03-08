@@ -57,7 +57,7 @@ class HeroSection extends Component {
             className="mb-8"
           >
             <div className="w-32 h-32 md:w-48 md:h-48 mx-auto relative">
-              <img src="/kaboona-logo.png" alt="Kaboona FC" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.3)]" />
+              <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="Kaboona FC" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.3)]" />
               {/* Glow ring */}
               <div className="absolute inset-0 animate-glow rounded-full" />
             </div>

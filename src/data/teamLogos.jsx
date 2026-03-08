@@ -6,15 +6,15 @@ import React from 'react';
  */
 
 const TEAM_LOGOS = {
-  'SIU FC': '/team-logos/siu-fc.jpeg',
-  'CIC X RA RAPTOR FC': '/team-logos/cic-raptor-fc.jpeg',
-  'Menjalara city FC': '/team-logos/menjalara-city-fc.webp',
-  'Kaboona FC': '/kaboona-logo.png',
-  'Susu XI': '/team-logos/susu-xi.png',
-  'Kelbros FC': '/team-logos/kelbros-fc.jpeg',
-  'BBNU FC B': '/team-logos/bbnu-fc-b.png',
-  'Scarecrow Fc': '/team-logos/scarecrow-fc.jpg',
-  'Ampang Rangers': '/team-logos/ampang-rangers.jpeg',
+  'SIU FC': `${import.meta.env.BASE_URL}team-logos/siu-fc.jpeg`,
+  'CIC X RA RAPTOR FC': `${import.meta.env.BASE_URL}team-logos/cic-raptor-fc.jpeg`,
+  'Menjalara city FC': `${import.meta.env.BASE_URL}team-logos/menjalara-city-fc.webp`,
+  'Kaboona FC': `${import.meta.env.BASE_URL}kaboona-logo.png`,
+  'Susu XI': `${import.meta.env.BASE_URL}team-logos/susu-xi.png`,
+  'Kelbros FC': `${import.meta.env.BASE_URL}team-logos/kelbros-fc.jpeg`,
+  'BBNU FC B': `${import.meta.env.BASE_URL}team-logos/bbnu-fc-b.png`,
+  'Scarecrow Fc': `${import.meta.env.BASE_URL}team-logos/scarecrow-fc.jpg`,
+  'Ampang Rangers': `${import.meta.env.BASE_URL}team-logos/ampang-rangers.jpeg`,
 };
 
 function getLogoPath(teamName) {

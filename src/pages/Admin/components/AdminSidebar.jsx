@@ -92,7 +92,7 @@ class AdminSidebar extends Component {
           <div className="flex items-center gap-3">
             {/* Logo */}
             <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-              <img src="/kaboona-logo.png" alt="Kaboona FC" className="w-full h-full object-contain" />
+              <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="Kaboona FC" className="w-full h-full object-contain" />
             </div>
             {!collapsed && (
               <motion.div

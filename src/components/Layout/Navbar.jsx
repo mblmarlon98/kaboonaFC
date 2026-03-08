@@ -318,7 +318,7 @@ class Navbar extends Component {
           <div className="flex items-center justify-between h-16 md:h-20">
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <img src="/kaboona-logo.png" alt="Kaboona FC" className="h-10 md:h-14 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="Kaboona FC" className="h-10 md:h-14 w-auto" />
             </Link>
 
             {/* Desktop Navigation */}
