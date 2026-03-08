@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import TrainingScheduler from './components/TrainingScheduler';
 import FormationBuilder from './components/FormationBuilder';
 import SquadSelection from './components/SquadSelection';
 import MatchEvaluation from './components/MatchEvaluation';
@@ -14,7 +15,7 @@ class CoachingZone extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      activeTab: 'formation',
+      activeTab: 'schedule',
     };
   }
 
@@ -120,6 +121,11 @@ class CoachingZone extends Component {
     const coachName = this.getCoachName();
 
     const tabs = [
+      { id: 'schedule', label: 'Schedule', icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      )},
       { id: 'formation', label: 'Formation Builder', icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
@@ -194,6 +200,7 @@ class CoachingZone extends Component {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2 }}
           >
+            {activeTab === 'schedule' && <TrainingScheduler />}
             {activeTab === 'formation' && <FormationBuilder />}
             {activeTab === 'squad' && <SquadSelection />}
             {activeTab === 'evaluation' && <MatchEvaluation />}
