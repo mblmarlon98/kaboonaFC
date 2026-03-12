@@ -11,10 +11,9 @@ export const getNextMatch = async () => {
     .gte('match_date', today)
     .order('match_date', { ascending: true })
     .order('match_time', { ascending: true })
-    .limit(1)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
 };
 
 export const getRecentResults = async (limit = 5) => {
@@ -51,9 +50,9 @@ export const getPublishedLineup = async (matchId) => {
     .select('*')
     .eq('match_id', matchId)
     .eq('published', true)
-    .single();
-  if (error && error.code !== 'PGRST116') throw error;
-  return data;
+    .limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
 };
 
 // ─── Fan Wall ────────────────────────────────────────────────────
@@ -96,12 +95,13 @@ export const deleteFanPost = async (postId) => {
 
 export const toggleLike = async (postId, userId) => {
   // Check if already liked
-  const { data: existing } = await supabase
+  const { data: rows } = await supabase
     .from('fan_post_likes')
     .select('id')
     .eq('post_id', postId)
     .eq('user_id', userId)
-    .single();
+    .limit(1);
+  const existing = rows?.[0];
 
   if (existing) {
     await supabase.from('fan_post_likes').delete().eq('id', existing.id);
@@ -226,8 +226,8 @@ export const getMyVote = async (matchId, voterId) => {
     .select('player_id')
     .eq('match_id', matchId)
     .eq('voter_id', voterId)
-    .single();
-  return data?.player_id || null;
+    .limit(1);
+  return data?.[0]?.player_id || null;
 };
 
 export const getVoteResults = async (matchId) => {
@@ -278,8 +278,8 @@ export const getMyPrediction = async (matchId, userId) => {
     .select('*')
     .eq('match_id', matchId)
     .eq('user_id', userId)
-    .single();
-  return data;
+    .limit(1);
+  return data?.[0] || null;
 };
 
 // ─── Gallery ─────────────────────────────────────────────────────
