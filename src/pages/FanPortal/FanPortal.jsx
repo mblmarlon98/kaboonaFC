@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { getNextMatch } from '../../services/fanPortalService';
 import MatchCenter from './components/MatchCenter';
+import FanWall from './components/FanWall';
 
 const TABS = [
   { id: 'match-center', label: 'Match Center', icon: '⚽' },
@@ -39,7 +40,7 @@ class FanPortal extends Component {
       case 'match-center':
         return <MatchCenter />;
       case 'fan-wall':
-        return <div className="text-center py-20 text-gray-400">Fan Wall — coming soon</div>;
+        return <FanWall />;
       case 'vote':
         return <div className="text-center py-20 text-gray-400">POTM Vote — coming soon</div>;
       case 'leaderboard':
