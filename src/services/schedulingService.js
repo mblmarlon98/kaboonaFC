@@ -182,6 +182,7 @@ export const completeMatch = async (matchId, scoreFor, scoreAgainst) => {
       score_for: scoreFor,
       score_against: scoreAgainst,
       result,
+      completed_at: new Date().toISOString(),
     })
     .eq('id', matchId)
     .select()
@@ -289,17 +290,31 @@ export const getInvitationsForEvent = async (eventType, eventId) => {
       profiles:player_id (
         full_name,
         profile_image_url
-      ),
-      players:player_id (
-        position
       )
     `)
     .eq('event_type', eventType)
     .eq('event_id', eventId)
-    .order('profiles(full_name)', { ascending: true });
+    .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  if (!data || data.length === 0) return [];
+
+  // Fetch player positions separately since player_id references profiles, not players
+  const playerUserIds = data.map((inv) => inv.player_id).filter(Boolean);
+  const { data: players } = await supabase
+    .from('players')
+    .select('user_id, position')
+    .in('user_id', playerUserIds);
+
+  const positionMap = {};
+  (players || []).forEach((p) => {
+    positionMap[p.user_id] = p.position;
+  });
+
+  return data.map((inv) => ({
+    ...inv,
+    players: { position: positionMap[inv.player_id] || null },
+  }));
 };
 
 /**
@@ -419,17 +434,22 @@ export const cancelEvent = async (eventType, eventId) => {
 export const getPositionBreakdown = async (eventType, eventId) => {
   const { data, error } = await supabase
     .from('event_invitations')
-    .select(`
-      player_id,
-      players:player_id (
-        position
-      )
-    `)
+    .select('player_id')
     .eq('event_type', eventType)
     .eq('event_id', eventId)
     .eq('status', 'accepted');
 
   if (error) throw error;
+
+  const playerUserIds = (data || []).map((inv) => inv.player_id).filter(Boolean);
+  if (playerUserIds.length === 0) {
+    return { gk: 0, def: 0, mid: 0, fwd: 0, total: 0 };
+  }
+
+  const { data: players } = await supabase
+    .from('players')
+    .select('user_id, position')
+    .in('user_id', playerUserIds);
 
   const DEF_POSITIONS = ['CB', 'LB', 'RB', 'LWB', 'RWB'];
   const MID_POSITIONS = ['CM', 'CDM', 'CAM', 'LM', 'RM'];
@@ -437,8 +457,8 @@ export const getPositionBreakdown = async (eventType, eventId) => {
 
   const breakdown = { gk: 0, def: 0, mid: 0, fwd: 0, total: 0 };
 
-  (data || []).forEach((inv) => {
-    const position = inv.players?.position?.toUpperCase();
+  (players || []).forEach((p) => {
+    const position = p.position?.toUpperCase();
     if (!position) return;
 
     breakdown.total += 1;
