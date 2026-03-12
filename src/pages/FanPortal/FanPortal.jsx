@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { getNextMatch } from '../../services/fanPortalService';
 import MatchCenter from './components/MatchCenter';
 import FanWall from './components/FanWall';
+import POTMVoting from './components/POTMVoting';
 
 const TABS = [
   { id: 'match-center', label: 'Match Center', icon: '⚽' },
@@ -42,7 +43,7 @@ class FanPortal extends Component {
       case 'fan-wall':
         return <FanWall />;
       case 'vote':
-        return <div className="text-center py-20 text-gray-400">POTM Vote — coming soon</div>;
+        return <POTMVoting />;
       case 'leaderboard':
         return <div className="text-center py-20 text-gray-400">Leaderboard — coming soon</div>;
       case 'match-day':
