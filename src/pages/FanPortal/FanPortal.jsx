@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { getNextMatch } from '../../services/fanPortalService';
+import MatchCenter from './components/MatchCenter';
 
 const TABS = [
   { id: 'match-center', label: 'Match Center', icon: '⚽' },
@@ -36,7 +37,7 @@ class FanPortal extends Component {
 
     switch (activeTab) {
       case 'match-center':
-        return <div className="text-center py-20 text-gray-400">Match Center — loading...</div>;
+        return <MatchCenter />;
       case 'fan-wall':
         return <div className="text-center py-20 text-gray-400">Fan Wall — coming soon</div>;
       case 'vote':
