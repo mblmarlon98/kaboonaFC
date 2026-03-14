@@ -4,8 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { connect } from 'react-redux';
 import { signOut } from '../../services/auth';
 import { logout } from '../../redux/slices/authSlice';
-import { markRead, markAllRead } from '../../redux/slices/notificationSlice';
+import { markRead, markAllRead, invitationResponded } from '../../redux/slices/notificationSlice';
 import { markAsRead, markAllAsRead } from '../../services/notificationService';
+import supabase from '../../services/supabase';
+import { respondToInvitation } from '../../services/schedulingService';
+import { approvePlayerRequest, declinePlayerRequest } from '../../services/playerRequestService';
 
 function getRelativeTime(dateStr) {
   const now = new Date();
@@ -53,6 +56,18 @@ function getNotificationTypeIcon(type) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
       )};
+    case 'player_request':
+      return { color: 'text-purple-400', bg: 'bg-purple-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+        </svg>
+      )};
+    case 'player_declined':
+      return { color: 'text-red-400', bg: 'bg-red-400/10', icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )};
     default:
       return { color: 'text-gray-400', bg: 'bg-gray-400/10', icon: (
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -69,6 +84,9 @@ class Navbar extends Component {
       isScrolled: false,
       isMobileMenuOpen: false,
       isNotificationOpen: false,
+      invitationMap: {},       // notification reference_id → invitation record
+      respondingId: null,      // invitation id currently being responded to
+      respondedIds: {},        // invitation id → 'accepted' | 'declined'
     };
     this.notificationRef = React.createRef();
   }
@@ -110,9 +128,13 @@ class Navbar extends Component {
   };
 
   toggleNotifications = () => {
-    this.setState((prevState) => ({
-      isNotificationOpen: !prevState.isNotificationOpen,
-    }));
+    this.setState((prevState) => {
+      const willOpen = !prevState.isNotificationOpen;
+      if (willOpen) {
+        this.loadInvitationsForNotifications();
+      }
+      return { isNotificationOpen: willOpen };
+    });
   };
 
   handleNotificationClick = async (notification) => {
@@ -123,6 +145,45 @@ class Navbar extends Component {
       } catch (err) {
         console.error('Failed to mark notification as read:', err);
       }
+    }
+  };
+
+  loadInvitationsForNotifications = async () => {
+    const { user } = this.props;
+    if (!user?.id) return;
+
+    try {
+      const { data } = await supabase
+        .from('event_invitations')
+        .select('*')
+        .eq('player_id', user.id)
+        .eq('status', 'pending');
+
+      if (data) {
+        const map = {};
+        data.forEach((inv) => {
+          map[inv.event_id] = inv;
+        });
+        this.setState({ invitationMap: map });
+      }
+    } catch (err) {
+      console.error('Failed to load invitations:', err);
+    }
+  };
+
+  handleInvitationRespond = async (invitation, status) => {
+    this.setState({ respondingId: invitation.id });
+    try {
+      await respondToInvitation(invitation.id, status);
+      this.setState((prev) => ({
+        respondingId: null,
+        respondedIds: { ...prev.respondedIds, [invitation.id]: status },
+      }));
+      // Signal UpcomingEvents to refresh
+      this.props.invitationResponded();
+    } catch (err) {
+      console.error('Failed to respond to invitation:', err);
+      this.setState({ respondingId: null });
     }
   };
 
@@ -178,6 +239,167 @@ class Navbar extends Component {
     );
   }
 
+  handlePlayerRequestAction = async (notification, action) => {
+    const requesterId = notification.reference_id;
+    const requesterName = notification.body?.split(' has ')[0] || 'User';
+
+    try {
+      if (action === 'approve') {
+        await approvePlayerRequest(requesterId, requesterName);
+      } else {
+        await declinePlayerRequest(requesterId);
+      }
+      // Mark this notification as read
+      this.handleNotificationClick(notification);
+      // Store the action result for ALL notifications with the same reference_id
+      // so other admins' notifications also show the resolved status
+      this.setState((prev) => {
+        const updated = { ...prev.playerRequestActions };
+        const { notifications } = this.props;
+        notifications.forEach((n) => {
+          if (n.type === 'player_request' && n.reference_id === requesterId) {
+            updated[n.id] = action;
+          }
+        });
+        return { playerRequestActions: updated };
+      });
+    } catch (err) {
+      console.error(`Failed to ${action} player request:`, err);
+    }
+  };
+
+  renderNotificationItem(notification) {
+    const { invitationMap, respondingId, respondedIds, playerRequestActions = {} } = this.state;
+    const typeInfo = getNotificationTypeIcon(notification.type);
+    const isInvitation = notification.type === 'event_invitation';
+    const invitation = isInvitation ? invitationMap[notification.reference_id] : null;
+    const responded = invitation ? respondedIds[invitation.id] : null;
+    const isResponding = invitation && respondingId === invitation.id;
+    const showActions = isInvitation && invitation && !responded;
+    const isPlayerRequest = notification.type === 'player_request';
+    const playerRequestAction = playerRequestActions[notification.id];
+    const { user } = this.props;
+    const canManagePlayerRequests = user?.isAdmin || user?.isCoach || user?.hasRole?.('admin') || user?.hasRole?.('coach');
+
+    return (
+      <div
+        key={notification.id}
+        onClick={() => this.handleNotificationClick(notification)}
+        className={`w-full text-left px-4 py-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 cursor-pointer ${
+          !notification.read ? 'bg-white/[0.03]' : ''
+        }`}
+      >
+        <div className="flex items-start space-x-3">
+          {/* Type Icon */}
+          <div className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-full ${typeInfo.bg} ${typeInfo.color} flex items-center justify-center`}>
+            {typeInfo.icon}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between">
+              <p className={`text-sm truncate ${!notification.read ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
+                {notification.title}
+              </p>
+              {!notification.read && (
+                <span className="flex-shrink-0 ml-2 mt-1.5 w-2 h-2 rounded-full bg-blue-500" />
+              )}
+            </div>
+            <p className="text-xs text-white/50 mt-0.5 line-clamp-2">
+              {notification.body}
+            </p>
+            <p className="text-[10px] text-white/30 mt-1">
+              {getRelativeTime(notification.created_at)}
+            </p>
+
+            {/* Inline Accept/Decline for invitation notifications */}
+            {showActions && (
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    this.handleInvitationRespond(invitation, 'accepted');
+                  }}
+                  disabled={isResponding}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
+                >
+                  {isResponding ? '...' : 'Accept'}
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    this.handleInvitationRespond(invitation, 'declined');
+                  }}
+                  disabled={isResponding}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold bg-white/10 text-white/70 hover:bg-white/20 transition-colors disabled:opacity-50"
+                >
+                  {isResponding ? '...' : 'Decline'}
+                </button>
+              </div>
+            )}
+
+            {/* Show responded status */}
+            {isInvitation && responded && (
+              <div className="mt-2">
+                {responded === 'accepted' ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                    Accepted
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white/50 border border-white/20">
+                    Declined
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Player Request Accept/Decline — only show if not yet handled */}
+            {isPlayerRequest && canManagePlayerRequests && !playerRequestAction && !notification.read && notification.title !== 'Player Request Handled' && (
+              <div className="flex items-center gap-2 mt-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    this.handlePlayerRequestAction(notification, 'approve');
+                  }}
+                  className="px-3 py-1 bg-green-500/20 text-green-400 text-xs font-medium rounded-lg hover:bg-green-500/30 transition-colors"
+                >
+                  Accept
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    this.handlePlayerRequestAction(notification, 'decline');
+                  }}
+                  className="px-3 py-1 bg-red-500/20 text-red-400 text-xs font-medium rounded-lg hover:bg-red-500/30 transition-colors"
+                >
+                  Decline
+                </button>
+              </div>
+            )}
+
+            {/* Player Request Action Status */}
+            {isPlayerRequest && (playerRequestAction || notification.read) && (
+              <div className="mt-2">
+                {(playerRequestAction === 'approve' || (notification.read && !playerRequestAction)) ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-500/20 text-green-400 border border-green-500/30">
+                    Handled
+                  </span>
+                ) : playerRequestAction === 'decline' ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                    Declined
+                  </span>
+                ) : null}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   renderNotificationDropdown() {
     const { notifications } = this.props;
     const displayNotifications = notifications.slice(0, 10);
@@ -204,7 +426,7 @@ class Navbar extends Component {
         </div>
 
         {/* Notification List */}
-        <div className="overflow-y-auto max-h-[calc(70vh-48px)]">
+        <div className="overflow-y-auto max-h-[calc(70vh-96px)]">
           {displayNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-10 px-4">
               <svg className="w-10 h-10 text-white/20 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -218,42 +440,22 @@ class Navbar extends Component {
               <p className="text-sm text-white/40">No notifications yet</p>
             </div>
           ) : (
-            displayNotifications.map((notification) => {
-              const typeInfo = getNotificationTypeIcon(notification.type);
-              return (
-                <button
-                  key={notification.id}
-                  onClick={() => this.handleNotificationClick(notification)}
-                  className={`w-full text-left px-4 py-3 flex items-start space-x-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 ${
-                    !notification.read ? 'bg-white/[0.03]' : ''
-                  }`}
-                >
-                  {/* Type Icon */}
-                  <div className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-full ${typeInfo.bg} ${typeInfo.color} flex items-center justify-center`}>
-                    {typeInfo.icon}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <p className={`text-sm truncate ${!notification.read ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
-                        {notification.title}
-                      </p>
-                      {!notification.read && (
-                        <span className="flex-shrink-0 ml-2 mt-1.5 w-2 h-2 rounded-full bg-blue-500" />
-                      )}
-                    </div>
-                    <p className="text-xs text-white/50 mt-0.5 line-clamp-2">
-                      {notification.body}
-                    </p>
-                    <p className="text-[10px] text-white/30 mt-1">
-                      {getRelativeTime(notification.created_at)}
-                    </p>
-                  </div>
-                </button>
-              );
-            })
+            displayNotifications.map((notification) => this.renderNotificationItem(notification))
           )}
+        </div>
+
+        {/* View All */}
+        <div className="border-t border-white/10">
+          <Link
+            to="/notifications"
+            onClick={() => this.setState({ isNotificationOpen: false })}
+            className="flex items-center justify-center gap-2 px-4 py-3 text-sm text-accent-gold hover:bg-white/5 transition-colors font-medium"
+          >
+            View All Notifications
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
         </div>
       </motion.div>
     );
@@ -291,19 +493,39 @@ class Navbar extends Component {
     const { darkMode, toggleDarkMode, user } = this.props;
     const { isScrolled, isMobileMenuOpen, isNotificationOpen } = this.state;
 
-    // Base navigation links
-    const navLinks = [
-      { to: '/', label: 'Home' },
-      { to: '/our-team', label: 'Our Team' },
-      { to: '/stats', label: 'Stats' },
-      { to: '/shop', label: 'Shop' },
-      { to: '/fan-portal', label: 'Fan Portal' },
-      { to: '/investors', label: 'Investors' },
-    ];
+    const hasRole = user?.hasRole || (() => false);
 
-    // Add Coaching Zone for coaches/owners (for demo, show to all logged-in users)
-    if (user) {
-      navLinks.push({ to: '/coaching-zone', label: 'Coaching Zone' });
+    // Determine if user is staff (any role besides fan/player)
+    const isStaff = user && (
+      hasRole('admin') || hasRole('super_admin') || hasRole('coach') ||
+      hasRole('owner') || hasRole('manager') || hasRole('editor') || hasRole('marketing')
+    );
+
+    let navLinks;
+    if (!isStaff) {
+      // Public nav for fans, players, and unauthenticated users
+      navLinks = [
+        { to: '/', label: 'Home' },
+        { to: '/our-team', label: 'Our Team' },
+        { to: '/stats', label: 'Stats' },
+        { to: '/shop', label: 'Shop' },
+        { to: '/fan-portal', label: 'Fan Portal' },
+        { to: '/investors', label: 'Investors' },
+      ];
+    } else {
+      // Simplified nav for staff — just Home + their zone link
+      navLinks = [{ to: '/', label: 'Home' }];
+
+      if (hasRole('admin') || hasRole('super_admin')) {
+        navLinks.push({ to: '/dashboard', label: 'Admin' });
+      } else {
+        if (hasRole('coach') || hasRole('owner') || hasRole('manager')) {
+          navLinks.push({ to: '/dashboard', label: 'Coaching Zone' });
+        }
+        if (hasRole('editor') || hasRole('marketing')) {
+          navLinks.push({ to: '/dashboard', label: 'Marketing Zone' });
+        }
+      }
     }
 
     return (
@@ -638,41 +860,7 @@ class Navbar extends Component {
               <p className="text-sm text-white/40">No notifications yet</p>
             </div>
           ) : (
-            displayNotifications.map((notification) => {
-              const typeInfo = getNotificationTypeIcon(notification.type);
-              return (
-                <button
-                  key={notification.id}
-                  onClick={() => this.handleNotificationClick(notification)}
-                  className={`w-full text-left px-4 py-3 flex items-start space-x-3 hover:bg-white/5 transition-colors border-b border-white/5 last:border-b-0 ${
-                    !notification.read ? 'bg-white/[0.03]' : ''
-                  }`}
-                >
-                  {/* Type Icon */}
-                  <div className={`flex-shrink-0 mt-0.5 w-8 h-8 rounded-full ${typeInfo.bg} ${typeInfo.color} flex items-center justify-center`}>
-                    {typeInfo.icon}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between">
-                      <p className={`text-sm truncate ${!notification.read ? 'font-semibold text-white' : 'font-medium text-white/80'}`}>
-                        {notification.title}
-                      </p>
-                      {!notification.read && (
-                        <span className="flex-shrink-0 ml-2 mt-1.5 w-2 h-2 rounded-full bg-blue-500" />
-                      )}
-                    </div>
-                    <p className="text-xs text-white/50 mt-0.5 line-clamp-2">
-                      {notification.body}
-                    </p>
-                    <p className="text-[10px] text-white/30 mt-1">
-                      {getRelativeTime(notification.created_at)}
-                    </p>
-                  </div>
-                </button>
-              );
-            })
+            displayNotifications.map((notification) => this.renderNotificationItem(notification))
           )}
         </div>
       </div>
@@ -690,6 +878,7 @@ const mapDispatchToProps = {
   logout,
   markRead,
   markAllRead,
+  invitationResponded,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Navbar);
