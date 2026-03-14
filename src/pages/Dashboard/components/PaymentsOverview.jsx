@@ -488,13 +488,13 @@ class PaymentsOverview extends Component {
             </motion.div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
               {/* Revenue Trend */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="lg:col-span-2 bg-surface-dark-elevated rounded-xl p-6 border border-white/10"
+                className="bg-surface-dark-elevated rounded-xl p-6 border border-white/10"
               >
                 <h3 className="text-lg font-display font-bold text-white mb-4">Revenue Trend</h3>
                 {monthlyRevenue.length === 0 ? (
@@ -545,7 +545,7 @@ class PaymentsOverview extends Component {
                 )}
               </motion.div>
 
-              {/* Subscription Breakdown */}
+              {/* Subscription Breakdown - commented out
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -603,6 +603,7 @@ class PaymentsOverview extends Component {
                   </>
                 )}
               </motion.div>
+              */}
             </div>
 
             {/* Revenue by Category Bar Chart */}

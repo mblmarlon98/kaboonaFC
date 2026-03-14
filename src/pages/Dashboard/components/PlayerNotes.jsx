@@ -65,15 +65,20 @@ class PlayerNotes extends Component {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, profile_image_url, role, roles, position')
+        .select('id, full_name, profile_image_url, role, roles, players(position)')
         .order('full_name');
       if (error) throw error;
 
-      // Filter to only players
-      const players = (data || []).filter((p) => {
-        if (Array.isArray(p.roles)) return p.roles.includes('player');
-        return p.role === 'player';
-      });
+      // Filter to only players, flatten position from joined players table
+      const players = (data || [])
+        .filter((p) => {
+          if (Array.isArray(p.roles)) return p.roles.includes('player');
+          return p.role === 'player';
+        })
+        .map((p) => ({
+          ...p,
+          position: p.players?.[0]?.position || p.players?.position || null,
+        }));
 
       this.setState({ players, loadingPlayers: false });
     } catch (err) {

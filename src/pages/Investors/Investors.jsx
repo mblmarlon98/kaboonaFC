@@ -377,7 +377,7 @@ class Investors extends Component {
                   Donate Now
                 </motion.a>
                 <motion.a
-                  href="mailto:sponsors@kaboonafc.com"
+                  href="mailto:sponsors@kaboona.com"
                   whileTap={{ scale: 0.95 }}
                   className="px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-lg hover:border-accent-gold hover:text-accent-gold transition-all duration-300"
                 >

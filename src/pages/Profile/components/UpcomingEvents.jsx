@@ -25,6 +25,12 @@ class UpcomingEvents extends Component {
     this.loadInvitations();
   }
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.invitationVersion !== this.props.invitationVersion) {
+      this.loadInvitations();
+    }
+  }
+
   loadInvitations = async () => {
     const { user } = this.props;
 
@@ -548,6 +554,7 @@ class UpcomingEvents extends Component {
 
 const mapStateToProps = (state) => ({
   user: state.auth?.user,
+  invitationVersion: state.notifications?.invitationVersion || 0,
 });
 
 export default connect(mapStateToProps)(UpcomingEvents);

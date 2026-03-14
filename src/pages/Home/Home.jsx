@@ -1,4 +1,5 @@
 import React, { Component } from 'react';
+import { supabase } from '../../services/supabase';
 import HeroSection from './components/HeroSection';
 import AboutSection from './components/AboutSection';
 import GlorySection from './components/GlorySection';
@@ -11,37 +12,37 @@ class Home extends Component {
     super(props);
     this.state = {
       isLoaded: false,
+      siteContent: {},
     };
   }
 
-  componentDidMount() {
-    // Trigger loaded state after mount for animations
+  async componentDidMount() {
     this.setState({ isLoaded: true });
-
-    // Scroll to top on mount
     window.scrollTo(0, 0);
+
+    try {
+      const { data } = await supabase.from('site_content').select('key, value');
+      if (data) {
+        const siteContent = {};
+        data.forEach((row) => { siteContent[row.key] = row.value || {}; });
+        this.setState({ siteContent });
+      }
+    } catch (err) {
+      console.error('Error fetching site content:', err);
+    }
   }
 
   render() {
+    const { siteContent } = this.state;
+
     return (
       <div className="bg-surface-dark min-h-screen">
-        {/* Hero Section - Full viewport banner */}
-        <HeroSection />
-
-        {/* About Section - Club introduction */}
-        <AboutSection />
-
-        {/* Glory Section - Stats, tables, achievements */}
-        <GlorySection />
-
-        {/* Training Ground Section - Location and facilities */}
-        <TrainingGroundSection />
-
-        {/* Team Preview Section - Coaches preview */}
-        <TeamPreviewSection />
-
-        {/* CTA Section - Join Training + Become a Fan */}
-        <CTASection />
+        <HeroSection content={siteContent.hero} />
+        <AboutSection content={siteContent.about} />
+        <GlorySection content={siteContent.glory} />
+        <TrainingGroundSection content={siteContent.training} />
+        <TeamPreviewSection content={siteContent.team_preview} />
+        <CTASection content={siteContent.cta} />
       </div>
     );
   }

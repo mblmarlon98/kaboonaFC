@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { supabase } from '../../services/supabase';
+import Calendar from './components/Calendar';
 
 /**
  * DashboardHome
@@ -416,47 +417,18 @@ class DashboardHome extends Component {
           </div>
         )}
 
-        {/* Upcoming Events */}
+        {/* Calendar */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="bg-surface-dark-elevated rounded-xl p-6 border border-white/10"
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-display font-bold text-white">Upcoming Events</h3>
-            <span className="text-white/30 text-sm">Next 5</span>
-          </div>
-          <div className="space-y-3">
-            {upcomingEvents.length > 0 ? (
-              upcomingEvents.map((event) => {
-                const badge = this.getTypeBadgeConfig(event.type);
-                return (
-                  <div
-                    key={event.id}
-                    className="flex items-center gap-4 p-3 rounded-lg hover:bg-white/5 transition-colors"
-                  >
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-medium truncate">{event.title}</p>
-                      {event.location && (
-                        <p className="text-white/40 text-xs truncate">{event.location}</p>
-                      )}
-                    </div>
-                    <p className="text-white/50 text-sm whitespace-nowrap">
-                      {this.formatEventDate(event.date)}
-                    </p>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-8 text-white/40">
-                No upcoming events
-              </div>
-            )}
-          </div>
+          <Calendar
+            userRoles={user?.roles || (user?.role ? [user.role] : [])}
+            user={user}
+            readOnly={false}
+            defaultViewMode="month"
+          />
         </motion.div>
       </div>
     );

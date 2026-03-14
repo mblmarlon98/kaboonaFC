@@ -6,6 +6,8 @@ const SECTION_DEFINITIONS = {
   hero: {
     name: 'Hero Section',
     fields: [
+      { key: 'clubName', label: 'Club Name (large heading)', type: 'text' },
+      { key: 'clubSuffix', label: 'Club Suffix (e.g. FC)', type: 'text' },
       { key: 'tagline', label: 'Tagline', type: 'text' },
       { key: 'ctaText1', label: 'Primary Button Text', type: 'text' },
       { key: 'ctaText2', label: 'Secondary Button Text', type: 'text' },
@@ -14,36 +16,99 @@ const SECTION_DEFINITIONS = {
   about: {
     name: 'About Section',
     fields: [
+      { key: 'badge', label: 'Badge Label', type: 'text' },
       { key: 'title', label: 'Club Name', type: 'text' },
       { key: 'location', label: 'Location', type: 'text' },
       { key: 'description', label: 'Description', type: 'textarea' },
       { key: 'image', label: 'Section Image', type: 'image' },
+      { key: 'stat1Value', label: 'Stat 1 - Value', type: 'text' },
+      { key: 'stat1Label', label: 'Stat 1 - Label', type: 'text' },
+      { key: 'stat2Value', label: 'Stat 2 - Value', type: 'text' },
+      { key: 'stat2Label', label: 'Stat 2 - Label', type: 'text' },
+      { key: 'stat3Value', label: 'Stat 3 - Value', type: 'text' },
+      { key: 'stat3Label', label: 'Stat 3 - Label', type: 'text' },
+      { key: 'stat4Value', label: 'Stat 4 - Value', type: 'text' },
+      { key: 'stat4Label', label: 'Stat 4 - Label', type: 'text' },
+    ],
+  },
+  glory: {
+    name: 'Glory Section',
+    fields: [
+      { key: 'badge', label: 'Badge Label', type: 'text' },
+      { key: 'heading', label: 'League Heading', type: 'text' },
+      { key: 'leagueTitle', label: 'League Name', type: 'text' },
+      { key: 'achievementsBadge', label: 'Achievements Badge', type: 'text' },
+      { key: 'achievementsHeading', label: 'Achievements Heading', type: 'text' },
+      { key: 'shameBadge', label: 'Wall of Shame Badge', type: 'text' },
+      { key: 'shameHeading', label: 'Wall of Shame Heading', type: 'text' },
     ],
   },
   training: {
     name: 'Training Ground',
     fields: [
+      { key: 'badge', label: 'Badge Label', type: 'text' },
       { key: 'title', label: 'Title', type: 'text' },
       { key: 'description', label: 'Description', type: 'textarea' },
       { key: 'image', label: 'Training Ground Photo', type: 'image' },
+      { key: 'feature1', label: 'Feature 1', type: 'text' },
+      { key: 'feature2', label: 'Feature 2', type: 'text' },
+      { key: 'feature3', label: 'Feature 3', type: 'text' },
+      { key: 'feature4', label: 'Feature 4', type: 'text' },
+      { key: 'groundLabel', label: 'Ground Name', type: 'text' },
+      { key: 'lat', label: 'Latitude', type: 'text' },
+      { key: 'lng', label: 'Longitude', type: 'text' },
+    ],
+  },
+  team_preview: {
+    name: 'Staff Preview Section',
+    fields: [
+      { key: 'badge', label: 'Badge Label', type: 'text' },
+      { key: 'heading', label: 'Heading', type: 'text' },
+      { key: 'description', label: 'Description', type: 'textarea' },
     ],
   },
   cta: {
     name: 'Call to Action',
     fields: [
+      { key: 'badge', label: 'Badge Label', type: 'text' },
       { key: 'heading', label: 'Section Heading', type: 'text' },
       { key: 'description', label: 'Section Description', type: 'textarea' },
+      { key: 'card1Subtitle', label: 'Card 1 - Subtitle', type: 'text' },
       { key: 'card1Title', label: 'Card 1 - Title', type: 'text' },
       { key: 'card1Description', label: 'Card 1 - Description', type: 'textarea' },
       { key: 'card1ButtonText', label: 'Card 1 - Button Text', type: 'text' },
+      { key: 'card2Subtitle', label: 'Card 2 - Subtitle', type: 'text' },
       { key: 'card2Title', label: 'Card 2 - Title', type: 'text' },
       { key: 'card2Description', label: 'Card 2 - Description', type: 'textarea' },
       { key: 'card2ButtonText', label: 'Card 2 - Button Text', type: 'text' },
+      { key: 'stat1Value', label: 'Stat 1 - Value', type: 'text' },
+      { key: 'stat1Label', label: 'Stat 1 - Label', type: 'text' },
+      { key: 'stat2Value', label: 'Stat 2 - Value', type: 'text' },
+      { key: 'stat2Label', label: 'Stat 2 - Label', type: 'text' },
+      { key: 'stat3Value', label: 'Stat 3 - Value', type: 'text' },
+      { key: 'stat3Label', label: 'Stat 3 - Label', type: 'text' },
+      { key: 'stat4Value', label: 'Stat 4 - Value', type: 'text' },
+      { key: 'stat4Label', label: 'Stat 4 - Label', type: 'text' },
     ],
   },
 };
 
 const ROLE_HIERARCHY = ['owner', 'manager', 'coach', 'admin'];
+
+/**
+ * Role-based section permissions.
+ * owner/admin/super_admin → all sections
+ * coach → training, team_preview
+ * marketing/editor → hero, about, glory, cta
+ */
+const ROLE_SECTION_PERMISSIONS = {
+  owner: Object.keys(SECTION_DEFINITIONS),
+  admin: Object.keys(SECTION_DEFINITIONS),
+  super_admin: Object.keys(SECTION_DEFINITIONS),
+  coach: ['training', 'team_preview'],
+  marketing: ['hero', 'about', 'glory', 'cta'],
+  editor: ['hero', 'about', 'glory', 'cta'],
+};
 
 class ContentManagement extends Component {
   constructor(props) {
@@ -84,6 +149,22 @@ class ContentManagement extends Component {
     this.fetchArticles();
   }
 
+  /**
+   * Get allowed section keys based on the user's roles.
+   */
+  getAllowedSections = () => {
+    const { user } = this.props;
+    if (!user) return Object.keys(SECTION_DEFINITIONS);
+    const userRoles = user.roles || (user.role ? [user.role] : []);
+    const allowed = new Set();
+    userRoles.forEach((role) => {
+      const sections = ROLE_SECTION_PERMISSIONS[role];
+      if (sections) sections.forEach((s) => allowed.add(s));
+    });
+    // If no matching role found (fallback), show all sections
+    return allowed.size > 0 ? Array.from(allowed) : Object.keys(SECTION_DEFINITIONS);
+  };
+
   // ─── Notifications ──────────────────────────────────────────────
 
   showNotification = (message) => {
@@ -116,10 +197,65 @@ class ContentManagement extends Component {
     this.setState({ savingSection: true });
     try {
       const defaults = {
-        hero: { tagline: '', ctaText1: '', ctaText2: '' },
-        about: { title: '', location: '', description: '', image: '' },
-        training: { title: '', description: '', image: '' },
-        cta: { heading: '', description: '', card1Title: '', card1Description: '', card1ButtonText: '', card2Title: '', card2Description: '', card2ButtonText: '' },
+        hero: {
+          clubName: 'KABOONA',
+          clubSuffix: 'FC',
+          tagline: 'Rise to Glory',
+          ctaText1: 'Join the Team',
+          ctaText2: 'Become a Fan',
+        },
+        about: {
+          badge: 'ABOUT THE CLUB',
+          title: 'Kaboona FC',
+          location: '',
+          description: '',
+          image: '',
+          stat1Value: '', stat1Label: '',
+          stat2Value: '', stat2Label: '',
+          stat3Value: '', stat3Label: '',
+          stat4Value: '', stat4Label: '',
+        },
+        glory: {
+          badge: 'GLORY SECTION',
+          heading: 'League Standing',
+          leagueTitle: 'The New Camp Edition (Division 3)',
+          achievementsBadge: 'ACHIEVEMENTS',
+          achievementsHeading: 'Our Stars',
+          shameBadge: 'HALL OF INFAMY',
+          shameHeading: 'Wall of Shame',
+        },
+        training: {
+          badge: 'TRAINING GROUND',
+          title: '',
+          description: '',
+          image: '',
+          feature1: '', feature2: '', feature3: '', feature4: '',
+          groundLabel: 'Training Ground',
+          lat: '3.0673',
+          lng: '101.6038',
+        },
+        team_preview: {
+          badge: 'OUR STAFF',
+          heading: 'Meet Our Team',
+          description: 'The people who lead, manage, and coach Kaboona FC to success.',
+        },
+        cta: {
+          badge: 'GET INVOLVED',
+          heading: 'Join the Pride',
+          description: 'Whether you want to play or support from the sidelines, there\'s a place for you at Kaboona FC.',
+          card1Subtitle: 'Become a Player',
+          card1Title: 'Join the Team',
+          card1Description: 'Ready to take your game to the next level? Create an account and request to join the Kaboona FC squad.',
+          card1ButtonText: 'Sign Up Now',
+          card2Subtitle: 'Join the Community',
+          card2Title: 'Become a Fan',
+          card2Description: 'Support Kaboona FC from the stands! Get exclusive content, match updates, and be part of our growing fanbase.',
+          card2ButtonText: 'Join Fan Portal',
+          stat1Value: '100+', stat1Label: 'Active Members',
+          stat2Value: '50+', stat2Label: 'Training Sessions',
+          stat3Value: '3', stat3Label: 'Competitive Teams',
+          stat4Value: '1', stat4Label: 'United Community',
+        },
       };
       const rows = Object.entries(defaults).map(([key, value]) => ({ key, value }));
       const { error } = await supabase.from('site_content').upsert(rows, { onConflict: 'key' });
@@ -506,7 +642,7 @@ class ContentManagement extends Component {
                 </button>
               </div>
             ) : (
-              Object.entries(SECTION_DEFINITIONS).map(([sectionKey, definition]) => {
+              Object.entries(SECTION_DEFINITIONS).filter(([sectionKey]) => this.getAllowedSections().includes(sectionKey)).map(([sectionKey, definition]) => {
                 const sectionValues = contentData[sectionKey] || {};
                 const isEditing = editingSection === sectionKey;
 

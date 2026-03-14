@@ -4,6 +4,7 @@ const initialState = {
   notifications: [],
   unreadCount: 0,
   loading: false,
+  invitationVersion: 0,
 };
 
 const notificationSlice = createSlice({
@@ -38,6 +39,9 @@ const notificationSlice = createSlice({
     setLoading: (state, action) => {
       state.loading = action.payload;
     },
+    invitationResponded: (state) => {
+      state.invitationVersion += 1;
+    },
   },
 });
 
@@ -48,6 +52,7 @@ export const {
   markAllRead,
   setUnreadCount,
   setLoading,
+  invitationResponded,
 } = notificationSlice.actions;
 
 export default notificationSlice.reducer;

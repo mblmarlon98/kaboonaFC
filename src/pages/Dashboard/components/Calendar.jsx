@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { supabase } from '../../../services/supabase';
 import CalendarEventModal from './CalendarEventModal';
+import MonthGrid from './MonthGrid';
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTH_NAMES = [
@@ -25,7 +26,7 @@ class Calendar extends Component {
     super(props);
     const today = new Date();
     this.state = {
-      viewMode: 'list', // 'month', 'week', 'list'
+      viewMode: props.defaultViewMode || 'month', // 'month', 'week', 'list'
       currentDate: new Date(today.getFullYear(), today.getMonth(), 1),
       allEvents: [],
       loading: true,
@@ -37,6 +38,7 @@ class Calendar extends Component {
       selectedEvent: null,
       showModal: false,
       createEventType: null,
+      createDefaultDate: null,
       showCreateMenu: false,
     };
   }
@@ -169,12 +171,12 @@ class Calendar extends Component {
     this.setState({ selectedEvent: event, createEventType: null, showModal: true });
   };
 
-  openCreateModal = (eventType) => {
-    this.setState({ selectedEvent: null, createEventType: eventType, showModal: true, showCreateMenu: false });
+  openCreateModal = (eventType, date) => {
+    this.setState({ selectedEvent: null, createEventType: eventType, createDefaultDate: date || null, showModal: true, showCreateMenu: false });
   };
 
   closeModal = () => {
-    this.setState({ showModal: false, selectedEvent: null, createEventType: null });
+    this.setState({ showModal: false, selectedEvent: null, createEventType: null, createDefaultDate: null });
   };
 
   handleEventSaved = () => {
@@ -404,66 +406,29 @@ class Calendar extends Component {
     );
   };
 
+  getCanCreateTypes = () => {
+    const { hasCoachRole, hasMarketingRole } = this.getRoleFlags();
+    const types = [];
+    if (hasCoachRole) { types.push('training', 'match'); }
+    if (hasMarketingRole) { types.push('event'); }
+    return types;
+  };
+
   renderMonthView = () => {
-    const grid = this.getMonthGrid();
+    const { readOnly } = this.props;
+    const { currentDate } = this.state;
+    const events = this.getFilteredEvents();
 
     return (
-      <div>
-        {/* Day headers */}
-        <div className="grid grid-cols-7 gap-px mb-1">
-          {DAY_NAMES.map((day) => (
-            <div key={day} className="text-center text-white/40 text-xs font-medium py-2">
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-px">
-          {grid.map((cell, idx) => {
-            const dayEvents = this.getEventsForDate(cell.date);
-            const today = this.isToday(cell.date);
-
-            return (
-              <div
-                key={idx}
-                className={`min-h-[80px] md:min-h-[100px] p-1 md:p-2 rounded-lg border transition-colors ${
-                  cell.isCurrentMonth
-                    ? 'border-white/5 bg-surface-dark-elevated'
-                    : 'border-transparent bg-white/[0.02]'
-                } ${today ? 'ring-1 ring-accent-gold' : ''}`}
-              >
-                <span
-                  className={`text-xs font-medium ${
-                    cell.isCurrentMonth ? 'text-white/70' : 'text-white/20'
-                  } ${today ? 'text-accent-gold font-bold' : ''}`}
-                >
-                  {cell.day}
-                </span>
-                <div className="mt-1 space-y-0.5">
-                  {dayEvents.slice(0, 3).map((event) => {
-                    const color = EVENT_COLORS[event.eventType] || EVENT_COLORS.event;
-                    return (
-                      <button
-                        key={event.id}
-                        onClick={() => this.openEvent(event)}
-                        className={`w-full text-left px-1 py-0.5 rounded text-[10px] md:text-xs truncate ${color.light} ${color.text} hover:opacity-80 transition-opacity`}
-                      >
-                        {this.getEventTitle(event)}
-                      </button>
-                    );
-                  })}
-                  {dayEvents.length > 3 && (
-                    <span className="text-[10px] text-white/40 pl-1">
-                      +{dayEvents.length - 3} more
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+      <MonthGrid
+        currentDate={currentDate}
+        events={events}
+        onEventClick={(event) => this.openEvent(event)}
+        onCreateEvent={(date, type) => this.openCreateModal(type, date)}
+        getEventTitle={this.getEventTitle}
+        readOnly={readOnly || false}
+        canCreateTypes={this.getCanCreateTypes()}
+      />
     );
   };
 
@@ -564,7 +529,7 @@ class Calendar extends Component {
 
   render() {
     const { readOnly } = this.props;
-    const { currentDate, viewMode, loading, showModal, selectedEvent, createEventType } = this.state;
+    const { currentDate, viewMode, loading, showModal, selectedEvent, createEventType, createDefaultDate } = this.state;
 
     return (
       <div className="space-y-6">
@@ -654,6 +619,7 @@ class Calendar extends Component {
             <CalendarEventModal
               event={selectedEvent}
               eventType={createEventType || selectedEvent?.eventType}
+              defaultDate={createDefaultDate}
               onClose={this.closeModal}
               onSave={this.handleEventSaved}
               readOnly={readOnly || false}

@@ -501,21 +501,18 @@ class Navbar extends Component {
       hasRole('owner') || hasRole('manager') || hasRole('editor') || hasRole('marketing')
     );
 
-    let navLinks;
-    if (!isStaff) {
-      // Public nav for fans, players, and unauthenticated users
-      navLinks = [
-        { to: '/', label: 'Home' },
-        { to: '/our-team', label: 'Our Team' },
-        { to: '/stats', label: 'Stats' },
-        { to: '/shop', label: 'Shop' },
-        { to: '/fan-portal', label: 'Fan Portal' },
-        { to: '/investors', label: 'Investors' },
-      ];
-    } else {
-      // Simplified nav for staff — just Home + their zone link
-      navLinks = [{ to: '/', label: 'Home' }];
+    // Public nav links — always shown
+    let navLinks = [
+      { to: '/', label: 'Home' },
+      { to: '/our-team', label: 'Our Team' },
+      { to: '/stats', label: 'Stats' },
+      { to: '/shop', label: 'Shop' },
+      { to: '/fan-portal', label: 'Fan Portal' },
+      { to: '/investors', label: 'Investors' },
+    ];
 
+    // Staff users also get their role-based dashboard link
+    if (isStaff) {
       if (hasRole('admin') || hasRole('super_admin')) {
         navLinks.push({ to: '/dashboard', label: 'Admin' });
       } else {
@@ -538,75 +535,33 @@ class Navbar extends Component {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
-            {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
-              <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="Kaboona FC" className="h-10 md:h-14 w-auto" />
-            </Link>
+            {/* Logo + Desktop Navigation */}
+            <div className="flex items-center">
+              <Link to="/" className="flex items-center space-x-2 mr-6">
+                <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="Kaboona FC" className="h-10 md:h-14 w-auto" />
+              </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-1">
-              {navLinks.map((link) => (
-                <NavLink
-                  key={link.to}
-                  to={link.to}
-                  className={({ isActive }) =>
-                    `px-4 py-2 text-sm font-medium transition-colors duration-200 ${
-                      isActive
-                        ? 'text-accent-gold'
-                        : 'text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white'
-                    }`
-                  }
-                >
-                  {link.label}
-                </NavLink>
-              ))}
+              <div className="hidden md:flex items-center space-x-1">
+                {navLinks.map((link) => (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    className={({ isActive }) =>
+                      `px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                        isActive
+                          ? 'text-accent-gold'
+                          : 'text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white'
+                      }`
+                    }
+                  >
+                    {link.label}
+                  </NavLink>
+                ))}
+              </div>
             </div>
 
             {/* Right Side - Desktop */}
             <div className="hidden md:flex items-center space-x-4">
-              {/* Dark Mode Toggle */}
-              <motion.button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                whileTap={{ scale: 0.95 }}
-                aria-label="Toggle dark mode"
-              >
-                <motion.div
-                  animate={{ rotate: darkMode ? 0 : 180 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {darkMode ? (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                      />
-                    </svg>
-                  )}
-                </motion.div>
-              </motion.button>
-
               {/* Notification Bell - Desktop */}
               {this.renderNotificationBell()}
 
@@ -651,44 +606,6 @@ class Navbar extends Component {
 
             {/* Mobile Menu Button */}
             <div className="md:hidden flex items-center space-x-2">
-              {/* Dark Mode Toggle - Mobile */}
-              <motion.button
-                onClick={toggleDarkMode}
-                className="p-2 rounded-full text-primary-black/80 dark:text-white/80 hover:text-primary-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
-                whileTap={{ scale: 0.95 }}
-                aria-label="Toggle dark mode"
-              >
-                {darkMode ? (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                ) : (
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                    />
-                  </svg>
-                )}
-              </motion.button>
-
               {/* Notification Bell - Mobile */}
               {this.renderMobileNotificationBell()}
 

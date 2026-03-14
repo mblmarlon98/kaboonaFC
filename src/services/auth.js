@@ -23,7 +23,7 @@ export const signInWithOAuth = async (provider) => {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
     options: {
-      redirectTo: `${window.location.origin}/auth/callback`,
+      redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}auth/callback`,
     },
   });
   return { data, error };
@@ -82,7 +82,7 @@ export const getCurrentUser = async () => {
   // Fetch profile to get role and roles array
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
-    .select('role, roles, full_name, profile_image_url')
+    .select('role, roles, full_name, profile_image_url, player_request_status')
     .eq('id', user.id)
     .single();
 
@@ -105,10 +105,13 @@ export const getCurrentUser = async () => {
     role: primaryRole,
     roles: roles,
     hasRole: hasRole,
-    isAdmin: hasRole('admin'),
+    isAdmin: hasRole('admin') || hasRole('super_admin'),
+    isSuperAdmin: hasRole('super_admin'),
     isPlayer: hasRole('player'),
     isCoach: hasRole('coach'),
     isOwner: hasRole('owner'),
+    isEditor: hasRole('editor'),
+    isMarketing: hasRole('marketing'),
     profile: profile,
     user_metadata: {
       ...user.user_metadata,

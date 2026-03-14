@@ -202,7 +202,7 @@ class TrainingSignup extends Component {
       try {
         const { data, error } = await signUp(formData.email, formData.password, {
           full_name: formData.fullName || 'New Player',
-          role: 'player',
+          role: 'fan',
         });
 
         if (error) {
@@ -536,7 +536,7 @@ class TrainingSignup extends Component {
             <p className="text-sm text-white/50">
               Just want to support us?{' '}
               <Link
-                to="/login?mode=fan"
+                to="/register"
                 className="text-secondary-blue hover:text-secondary-blue-light font-medium transition-colors"
               >
                 Become a Fan instead

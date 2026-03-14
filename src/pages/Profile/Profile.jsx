@@ -7,8 +7,11 @@ import QuickStats from './components/QuickStats';
 import UpcomingEvents from './components/UpcomingEvents';
 import RecentMatches from './components/RecentMatches';
 import AttendanceHistory from './components/AttendanceHistory';
-import SubscriptionCard from './components/SubscriptionCard';
+// import SubscriptionCard from './components/SubscriptionCard';
 import { supabase } from '../../services/supabase';
+import { refreshUser } from '../../services/auth';
+import { requestPlayerStatus } from '../../services/playerRequestService';
+import { setUser } from '../../redux/slices/authSlice';
 
 /**
  * Profile page (Player Dashboard)
@@ -22,6 +25,7 @@ class Profile extends Component {
       isLoading: true,
       playerData: null,
       error: null,
+      requestingPlayer: false,
     };
   }
 
@@ -62,10 +66,10 @@ class Profile extends Component {
       const playerData = {
         id: player?.id || user.id,
         name: player?.name || metadata.full_name || user?.email?.split('@')[0] || 'Player',
-        email: player?.email || user?.email || 'player@kaboonafc.com',
+        email: player?.email || user?.email || 'player@kaboona.com',
         position: player?.position || metadata.position || 'CAM',
         number: player?.number || metadata.jersey_number || 10,
-        country: player?.country || metadata.country || 'gb',
+        country: player?.country || metadata.nationality || metadata.country || 'gb',
         height: player?.height ? `${player.height} cm` : (metadata.height ? `${metadata.height} cm` : '-'),
         weight: player?.weight ? `${player.weight} kg` : (metadata.weight ? `${metadata.weight} kg` : '-'),
         preferredFoot: player?.foot ? (player.foot.charAt(0).toUpperCase() + player.foot.slice(1)) : (metadata.preferred_foot || 'Right'),
@@ -117,10 +121,10 @@ class Profile extends Component {
     const playerData = {
       id: user?.id || '1',
       name: metadata.full_name || user?.email?.split('@')[0] || 'Player',
-      email: user?.email || 'player@kaboonafc.com',
+      email: user?.email || 'player@kaboona.com',
       position: metadata.position || 'CAM',
       number: metadata.jersey_number || 10,
-      country: metadata.country || 'gb',
+      country: metadata.nationality || metadata.country || 'gb',
       height: metadata.height ? `${metadata.height} cm` : '-',
       weight: metadata.weight ? `${metadata.weight} kg` : '-',
       preferredFoot: metadata.preferred_foot || 'Right',
@@ -156,6 +160,30 @@ class Profile extends Component {
       isLoading: false,
       playerData,
     });
+  };
+
+  handlePlayerRequest = async () => {
+    const { user } = this.props;
+    if (!user) return;
+
+    this.setState({ requestingPlayer: true });
+
+    const userName = user.user_metadata?.full_name || user.email;
+    const { error } = await requestPlayerStatus(user.id, userName);
+
+    if (error) {
+      console.error('Failed to request player status:', error);
+      this.setState({ requestingPlayer: false });
+      return;
+    }
+
+    // Refresh user to get updated player_request_status
+    const { user: updatedUser } = await refreshUser();
+    if (updatedUser) {
+      this.props.setUser(updatedUser);
+    }
+
+    this.setState({ requestingPlayer: false });
   };
 
   handleManageSubscription = () => {
@@ -197,28 +225,223 @@ class Profile extends Component {
     </div>
   );
 
-  render() {
-    const { isLoading, playerData, error } = this.state;
+  renderPlayerRequestCard() {
+    const status = this.props.user?.profile?.player_request_status;
 
-    if (isLoading) {
-      return this.renderLoadingState();
+    if (status === 'pending') {
+      return (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-yellow-400/10 via-surface-dark-elevated to-surface-dark-elevated rounded-xl border border-yellow-400/20 p-8"
+        >
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-yellow-400/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-display font-bold text-white mb-1">Request Sent</h3>
+              <p className="text-white/60 text-sm">Your request has been sent to the management and is waiting for approval. We'll notify you once a decision has been made.</p>
+            </div>
+          </div>
+        </motion.div>
+      );
     }
 
-    if (error) {
+    if (status === 'declined') {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-surface-dark">
-          <div className="text-center">
-            <p className="text-red-400 mb-4">{error}</p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-red-400/10 via-surface-dark-elevated to-surface-dark-elevated rounded-xl border border-red-400/20 p-8"
+        >
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <div className="w-12 h-12 rounded-full bg-red-400/10 flex items-center justify-center flex-shrink-0">
+              <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-display font-bold text-white mb-1">Request Not Approved</h3>
+              <p className="text-white/60 text-sm mb-4">Your previous request wasn't approved this time, but you're welcome to try again.</p>
+              <button
+                onClick={this.handlePlayerRequest}
+                disabled={this.state.requestingPlayer}
+                className="px-5 py-2.5 bg-accent-gold text-black font-semibold rounded-lg hover:bg-accent-gold-light transition-colors disabled:opacity-50"
+              >
+                {this.state.requestingPlayer ? 'Requesting...' : 'Request Again'}
+              </button>
+            </div>
+          </div>
+        </motion.div>
+      );
+    }
+
+    // Default: no request yet
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-br from-accent-gold/10 via-surface-dark-elevated to-surface-dark-elevated rounded-xl border border-accent-gold/20 p-8"
+      >
+        <div className="flex flex-col sm:flex-row items-start gap-6">
+          <div className="w-14 h-14 rounded-full bg-accent-gold/10 flex items-center justify-center flex-shrink-0">
+            <svg className="w-7 h-7 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-display font-bold text-white mb-2">
+              Are you playing for Kaboona FC?
+            </h3>
+            <p className="text-white/60 text-sm mb-5">
+              If you're already part of the squad or would like to join the team, request player status below. Once approved by the coaching staff, you'll get your own FIFA-style player card, access to team stats, and more.
+            </p>
             <button
-              onClick={this.loadPlayerData}
-              className="px-6 py-2 bg-accent-gold text-black font-bold rounded-lg"
+              onClick={this.handlePlayerRequest}
+              disabled={this.state.requestingPlayer}
+              className="px-6 py-3 bg-accent-gold text-black font-semibold rounded-lg hover:bg-accent-gold-light transition-all hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
             >
-              Try Again
+              {this.state.requestingPlayer ? (
+                <span className="flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                  Sending Request...
+                </span>
+              ) : (
+                'Request to Join the Team'
+              )}
             </button>
           </div>
         </div>
-      );
-    }
+      </motion.div>
+    );
+  }
+
+  renderFanDashboard() {
+    const { user } = this.props;
+    const { playerData } = this.state;
+    const name = playerData?.name || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Fan';
+    const avatarInitial = name.charAt(0).toUpperCase();
+    const avatarUrl = playerData?.image || user?.user_metadata?.avatar_url || null;
+    const status = user?.profile?.player_request_status;
+    const isApproved = status === 'approved';
+
+    const quickLinks = [
+      { to: '/fan-portal', label: 'Fan Portal', desc: 'Predictions, voting, leaderboards', icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+        </svg>
+      )},
+      { to: '/our-team', label: 'Our Team', desc: 'Meet the squad', icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )},
+      { to: '/stats', label: 'Stats', desc: 'Player & team statistics', icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      )},
+      { to: '/shop', label: 'Shop', desc: 'Official merchandise', icon: (
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+      )},
+    ];
+
+    return (
+      <div className="min-h-screen bg-surface-dark pb-20">
+        {/* Header */}
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-b from-accent-gold/10 to-transparent h-80" />
+          <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-12">
+            {/* Welcome Section */}
+            <motion.div
+              className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-10"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              {/* Avatar */}
+              <div className="w-20 h-20 rounded-full bg-accent-gold flex items-center justify-center overflow-hidden flex-shrink-0 ring-4 ring-accent-gold/20">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt={name} className="w-full h-full object-cover" />
+                ) : (
+                  <span className="text-2xl font-display font-bold text-black">{avatarInitial}</span>
+                )}
+              </div>
+              <div className="text-center sm:text-left">
+                <h1 className="text-3xl sm:text-4xl font-display font-bold text-white uppercase tracking-wider">
+                  Welcome, {name}
+                </h1>
+                <p className="text-white/60 mt-2">
+                  Kaboona FC Fan
+                </p>
+              </div>
+              <div className="sm:ml-auto">
+                <Link
+                  to="/profile/edit"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-white/10 text-white font-medium rounded-lg hover:bg-white/20 transition-colors border border-white/10"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit Profile
+                </Link>
+              </div>
+            </motion.div>
+
+            {/* Player Request Card */}
+            {!isApproved && this.renderPlayerRequestCard()}
+
+            {/* Quick Links Grid */}
+            <motion.div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-8"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+            >
+              {quickLinks.map((link) => (
+                <Link
+                  key={link.to}
+                  to={link.to}
+                  className="group bg-surface-dark-elevated rounded-xl border border-white/10 p-6 hover:border-accent-gold/30 hover:bg-surface-dark-elevated/80 transition-all"
+                >
+                  <div className="text-accent-gold mb-3 group-hover:scale-110 transition-transform inline-block">
+                    {link.icon}
+                  </div>
+                  <h3 className="text-white font-display font-bold text-lg">{link.label}</h3>
+                  <p className="text-white/50 text-sm mt-1">{link.desc}</p>
+                </Link>
+              ))}
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Upcoming Events */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <UpcomingEvents />
+        </div>
+
+        {/* Subscription Card
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          <SubscriptionCard
+            plan={playerData?.subscription?.plan || 'free'}
+            nextBillingDate={playerData?.subscription?.nextBillingDate || null}
+            onManageSubscription={this.handleManageSubscription}
+          />
+        </div>
+        */}
+      </div>
+    );
+  }
+
+  renderPlayerDashboard() {
+    const { playerData } = this.state;
 
     return (
       <div className="min-h-screen bg-surface-dark pb-20">
@@ -323,7 +546,7 @@ class Profile extends Component {
             <AttendanceHistory />
           </div>
 
-          {/* Subscription Card */}
+          {/* Subscription Card
           <div className="mt-8">
             <SubscriptionCard
               plan={playerData.subscription.plan}
@@ -331,9 +554,42 @@ class Profile extends Component {
               onManageSubscription={this.handleManageSubscription}
             />
           </div>
+          */}
         </div>
       </div>
     );
+  }
+
+  render() {
+    const { isLoading, playerData, error } = this.state;
+
+    if (isLoading) {
+      return this.renderLoadingState();
+    }
+
+    if (error) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+          <div className="text-center">
+            <p className="text-red-400 mb-4">{error}</p>
+            <button
+              onClick={this.loadPlayerData}
+              className="px-6 py-2 bg-accent-gold text-black font-bold rounded-lg"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Show fan dashboard if user is not an approved player
+    const isPlayer = playerData?.isFromDatabase;
+    if (!isPlayer) {
+      return this.renderFanDashboard();
+    }
+
+    return this.renderPlayerDashboard();
   }
 }
 
@@ -341,4 +597,8 @@ const mapStateToProps = (state) => ({
   user: state.auth?.user,
 });
 
-export default connect(mapStateToProps)(Profile);
+const mapDispatchToProps = {
+  setUser,
+};
+
+export default connect(mapStateToProps, mapDispatchToProps)(Profile);

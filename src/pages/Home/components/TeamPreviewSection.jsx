@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import supabase from '../../../services/supabase';
+import { supabase } from '../../../services/supabase';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -16,20 +16,27 @@ const CoachCardSkeleton = () => (
   </div>
 );
 
+const ROLE_DISPLAY = {
+  owner: { label: 'Owner', color: 'text-yellow-300' },
+  manager: { label: 'Manager', color: 'text-blue-400' },
+  coach: { label: 'Coach', color: 'text-accent-gold' },
+  admin: { label: 'Admin', color: 'text-green-400' },
+};
+
 class TeamPreviewSection extends Component {
   constructor(props) {
     super(props);
     this.sectionRef = createRef();
     this.cardsRef = createRef();
     this.state = {
-      coaches: [],
+      staff: [],
       loading: true,
       error: null,
     };
   }
 
   componentDidMount() {
-    this.fetchCoaches();
+    this.fetchStaff();
   }
 
   componentWillUnmount() {
@@ -58,89 +65,77 @@ class TeamPreviewSection extends Component {
     }
   };
 
-  fetchCoaches = async () => {
+  fetchStaff = async () => {
     try {
       const { data, error } = await supabase
-        .from('coaches')
-        .select('*')
-        .order('display_order', { ascending: true })
-        .limit(3);
+        .from('profiles')
+        .select('id, full_name, role, roles, profile_image_url');
 
-      if (error && error.code !== 'PGRST116') {
-        console.warn('Coaches data not available:', error);
+      if (error) {
+        console.warn('Could not fetch staff profiles:', error);
       }
 
-      // Mock data if Supabase is not configured
-      const mockCoaches = [
-        {
-          id: 1,
-          name: 'Coach Ahmad',
-          role: 'Head Coach',
-          bio: 'Former professional player with 15 years of coaching experience. Leading Kaboona FC to new heights.',
-          image_url: null,
-          achievements: ['UEFA B License', '3x League Champion'],
-        },
-        {
-          id: 2,
-          name: 'Coach David',
-          role: 'Assistant Coach',
-          bio: 'Specializes in tactical analysis and player development. Expert in modern football methodologies.',
-          image_url: null,
-          achievements: ['AFC C License', 'Youth Academy Director'],
-        },
-        {
-          id: 3,
-          name: 'Coach Sarah',
-          role: 'Fitness Coach',
-          bio: 'Sports science graduate ensuring our players are in peak physical condition throughout the season.',
-          image_url: null,
-          achievements: ['CSCS Certified', 'Performance Specialist'],
-        },
-      ];
+      const staffRoles = ['owner', 'manager', 'coach', 'admin'];
+      const rolePriority = { owner: 0, manager: 1, coach: 2, admin: 3 };
 
-      this.setState(
-        {
-          coaches: data || mockCoaches,
-          loading: false,
-        },
-        () => {
-          this.initScrollAnimation();
-        }
-      );
+      const staffMembers = (data || [])
+        .filter((p) => {
+          if (Array.isArray(p.roles)) return p.roles.some((r) => staffRoles.includes(r));
+          return staffRoles.includes(p.role);
+        })
+        .map((p) => {
+          const bestRole = this.getBestRole(p, staffRoles);
+          return {
+            id: p.id,
+            name: p.full_name || 'Staff Member',
+            role: ROLE_DISPLAY[bestRole]?.label || bestRole,
+            roleKey: bestRole,
+            image_url: p.profile_image_url,
+          };
+        })
+        .sort((a, b) => (rolePriority[a.roleKey] ?? 99) - (rolePriority[b.roleKey] ?? 99));
+
+      // Show up to 3 staff members
+      this.setState({ staff: staffMembers.slice(0, 3), loading: false }, () => {
+        this.initScrollAnimation();
+      });
     } catch (error) {
-      console.error('Error fetching coaches:', error);
+      console.error('Error fetching staff:', error);
       this.setState({ error: error.message, loading: false });
     }
   };
 
-  renderCoachCard = (coach, index) => {
-    const roleColors = {
-      'Head Coach': 'text-accent-gold',
-      'Assistant Coach': 'text-secondary-blue',
-      'Fitness Coach': 'text-green-400',
-    };
+  getBestRole = (profile, staffRoles) => {
+    const priority = ['owner', 'manager', 'coach', 'admin'];
+    if (Array.isArray(profile.roles)) {
+      for (const r of priority) {
+        if (profile.roles.includes(r)) return r;
+      }
+      return profile.roles.find((r) => staffRoles.includes(r)) || profile.role;
+    }
+    return profile.role;
+  };
+
+  renderStaffCard = (member) => {
+    const roleColor = ROLE_DISPLAY[member.roleKey]?.color || 'text-white/60';
 
     return (
-      <div
-        key={coach.id || index}
-        className="group relative"
-      >
+      <div key={member.id} className="group relative">
         <div className="relative overflow-hidden rounded-2xl bg-surface-dark-elevated border border-white/5 hover:border-accent-gold/30 transition-all duration-500">
           {/* Image Container */}
           <div className="aspect-[3/4] relative overflow-hidden">
-            {coach.image_url ? (
+            {member.image_url ? (
               <img
-                src={coach.image_url}
-                alt={coach.name}
+                src={member.image_url}
+                alt={member.name}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              // Placeholder Avatar
               <div className="w-full h-full bg-gradient-to-br from-surface-dark-hover to-surface-dark flex items-center justify-center">
                 <div className="w-24 h-24 rounded-full bg-white/10 flex items-center justify-center">
-                  <svg className="w-12 h-12 text-white/30" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-                  </svg>
+                  <span className="text-4xl font-display font-bold text-white/30">
+                    {member.name.charAt(0)}
+                  </span>
                 </div>
               </div>
             )}
@@ -150,31 +145,13 @@ class TeamPreviewSection extends Component {
 
             {/* Content Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-6">
-              <p className={`text-sm font-semibold uppercase tracking-wider ${roleColors[coach.role] || 'text-white/60'} mb-2`}>
-                {coach.role}
+              <p className={`text-sm font-semibold uppercase tracking-wider ${roleColor} mb-2`}>
+                {member.role}
               </p>
               <h3 className="text-2xl font-display font-bold text-white mb-2">
-                {coach.name}
+                {member.name}
               </h3>
 
-              {/* Expandable Bio on Hover */}
-              <div className="max-h-0 overflow-hidden group-hover:max-h-32 transition-all duration-500">
-                <p className="text-white/60 text-sm leading-relaxed mb-3">
-                  {coach.bio}
-                </p>
-                {coach.achievements && (
-                  <div className="flex flex-wrap gap-2">
-                    {coach.achievements.slice(0, 2).map((achievement, i) => (
-                      <span
-                        key={i}
-                        className="text-xs px-2 py-1 bg-white/10 rounded-full text-white/70"
-                      >
-                        {achievement}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         </div>
@@ -183,7 +160,11 @@ class TeamPreviewSection extends Component {
   };
 
   render() {
-    const { coaches, loading } = this.state;
+    const { staff, loading } = this.state;
+    const c = this.props.content || {};
+    const badge = c.badge || 'OUR STAFF';
+    const heading = c.heading || 'Meet Our Team';
+    const description = c.description || 'The people who lead, manage, and coach Kaboona FC to success.';
 
     return (
       <section
@@ -199,31 +180,33 @@ class TeamPreviewSection extends Component {
           {/* Section Header */}
           <div className="text-center mb-16">
             <span className="inline-block px-4 py-1 bg-accent-gold/10 text-accent-gold text-sm font-semibold tracking-wider rounded-full mb-6">
-              COACHING STAFF
+              {badge}
             </span>
             <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-4">
-              Meet Our <span className="text-accent-gold">Team</span>
+              {heading}
             </h2>
             <p className="text-lg text-white/60 max-w-2xl mx-auto">
-              Experienced professionals dedicated to developing talent and leading
-              Kaboona FC to success.
+              {description}
             </p>
           </div>
 
-          {/* Coach Cards */}
+          {/* Staff Cards */}
           <div
             ref={this.cardsRef}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
           >
             {loading
-              ? Array(3)
-                  .fill(0)
-                  .map((_, i) => (
-                    <div key={i}>
-                      <CoachCardSkeleton />
-                    </div>
-                  ))
-              : coaches.map((coach, index) => this.renderCoachCard(coach, index))}
+              ? Array(3).fill(0).map((_, i) => (
+                  <div key={i}><CoachCardSkeleton /></div>
+                ))
+              : staff.length > 0
+              ? staff.map((member) => this.renderStaffCard(member))
+              : (
+                <div className="col-span-3 text-center py-12">
+                  <p className="text-white/40">No staff members assigned yet. Add them in the admin panel.</p>
+                </div>
+              )
+            }
           </div>
 
           {/* CTA to Our Team Page */}

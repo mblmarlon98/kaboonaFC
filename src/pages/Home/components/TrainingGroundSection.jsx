@@ -1,5 +1,4 @@
 import React, { Component, createRef } from 'react';
-import { motion } from 'framer-motion';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
@@ -22,7 +21,6 @@ class TrainingGroundSection extends Component {
   }
 
   initAnimations = () => {
-    // Parallax effect on image
     if (this.imageRef.current) {
       gsap.to(this.imageRef.current, {
         yPercent: -15,
@@ -36,7 +34,6 @@ class TrainingGroundSection extends Component {
       });
     }
 
-    // Content reveal animation
     if (this.contentRef.current) {
       gsap.fromTo(
         this.contentRef.current.children,
@@ -57,14 +54,18 @@ class TrainingGroundSection extends Component {
   };
 
   render() {
-    const coordinates = {
-      lat: '3.0673',
-      lng: '101.6038',
-      latDir: 'N',
-      lngDir: 'E',
-    };
-
-    const googleMapsUrl = `https://www.google.com/maps?q=${coordinates.lat},${coordinates.lng}`;
+    const c = this.props.content || {};
+    const badge = c.badge || 'TRAINING GROUND';
+    const title = c.title || '';
+    const description = c.description || '';
+    const trainingImage = c.image || null;
+    const groundLabel = c.groundLabel || 'Training Ground';
+    const features = [c.feature1, c.feature2, c.feature3, c.feature4].filter(Boolean);
+    const lat = c.lat || '3.0673';
+    const lng = c.lng || '101.6038';
+    const latDir = parseFloat(lat) >= 0 ? 'N' : 'S';
+    const lngDir = parseFloat(lng) >= 0 ? 'E' : 'W';
+    const googleMapsUrl = `https://www.google.com/maps?q=${lat},${lng}`;
 
     return (
       <section
@@ -76,98 +77,83 @@ class TrainingGroundSection extends Component {
             {/* Image Container */}
             <div className="relative order-2 lg:order-1">
               <div className="relative aspect-[4/3] rounded-2xl overflow-hidden">
-                {/* Placeholder Image - Football field aerial view style */}
-                <div
-                  ref={this.imageRef}
-                  className="absolute inset-0 bg-gradient-to-br from-green-800 via-green-700 to-green-900"
-                >
-                  {/* Field Pattern Overlay */}
-                  <div className="absolute inset-0 opacity-30">
-                    {/* Center Circle */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/40 rounded-full" />
-                    {/* Center Line */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-full bg-white/40" />
-                    {/* Penalty Areas */}
-                    <div className="absolute top-1/2 left-0 -translate-y-1/2 w-20 h-40 border-2 border-white/40 border-l-0" />
-                    <div className="absolute top-1/2 right-0 -translate-y-1/2 w-20 h-40 border-2 border-white/40 border-r-0" />
-                    {/* Goal Areas */}
-                    <div className="absolute top-1/2 left-0 -translate-y-1/2 w-8 h-20 border-2 border-white/40 border-l-0" />
-                    <div className="absolute top-1/2 right-0 -translate-y-1/2 w-8 h-20 border-2 border-white/40 border-r-0" />
-                  </div>
-
-                  {/* Grass Texture Lines */}
-                  <div
-                    className="absolute inset-0"
-                    style={{
-                      backgroundImage: `repeating-linear-gradient(
-                        90deg,
-                        transparent,
-                        transparent 20px,
-                        rgba(255, 255, 255, 0.03) 20px,
-                        rgba(255, 255, 255, 0.03) 40px
-                      )`,
-                    }}
+                {trainingImage ? (
+                  <img
+                    ref={this.imageRef}
+                    src={trainingImage}
+                    alt="Kaboona FC Training Ground"
+                    className="absolute inset-0 w-full h-full object-cover"
                   />
-                </div>
+                ) : (
+                  <div
+                    ref={this.imageRef}
+                    className="absolute inset-0 bg-gradient-to-br from-green-800 via-green-700 to-green-900"
+                  >
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white/40 rounded-full" />
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0.5 h-full bg-white/40" />
+                      <div className="absolute top-1/2 left-0 -translate-y-1/2 w-20 h-40 border-2 border-white/40 border-l-0" />
+                      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-20 h-40 border-2 border-white/40 border-r-0" />
+                      <div className="absolute top-1/2 left-0 -translate-y-1/2 w-8 h-20 border-2 border-white/40 border-l-0" />
+                      <div className="absolute top-1/2 right-0 -translate-y-1/2 w-8 h-20 border-2 border-white/40 border-r-0" />
+                    </div>
+                    <div
+                      className="absolute inset-0"
+                      style={{
+                        backgroundImage: `repeating-linear-gradient(
+                          90deg,
+                          transparent,
+                          transparent 20px,
+                          rgba(255, 255, 255, 0.03) 20px,
+                          rgba(255, 255, 255, 0.03) 40px
+                        )`,
+                      }}
+                    />
+                  </div>
+                )}
 
-                {/* Overlay Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-surface-dark/80 via-transparent to-transparent" />
 
-                {/* Image Label */}
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="px-4 py-2 bg-black/60 backdrop-blur-sm rounded-lg inline-block">
                     <p className="text-white/90 text-sm font-medium">
-                      Kaboona FC Training Ground
+                      {groundLabel}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Decorative Element */}
               <div className="absolute -top-4 -left-4 w-24 h-24 border-2 border-accent-gold/30 rounded-2xl -z-10" />
               <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-accent-gold/5 rounded-2xl -z-10" />
             </div>
 
             {/* Content */}
             <div ref={this.contentRef} className="order-1 lg:order-2">
-              {/* Section Label */}
               <span className="inline-block px-4 py-1 bg-accent-gold/10 text-accent-gold text-sm font-semibold tracking-wider rounded-full mb-6">
-                TRAINING GROUND
+                {badge}
               </span>
 
-              {/* Heading */}
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
-                Where Champions Are <span className="text-accent-gold">Made</span>
-              </h2>
+              {title && <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-6">
+                {title}
+              </h2>}
 
-              {/* Description */}
-              <p className="text-lg text-white/60 leading-relaxed mb-8">
-                Our home ground provides world-class facilities
-                for training and matches. The state-of-the-art pitch is where our
-                players develop their skills, build team chemistry, and prepare for
-                competitive play.
-              </p>
+              {description && <p className="text-lg text-white/60 leading-relaxed mb-8">
+                {description}
+              </p>}
 
-              {/* Features */}
-              <div className="space-y-4 mb-8">
-                {[
-                  { icon: 'M5 13l4 4L19 7', text: 'Professional-grade natural turf' },
-                  { icon: 'M5 13l4 4L19 7', text: 'Floodlights for evening sessions' },
-                  { icon: 'M5 13l4 4L19 7', text: 'Changing rooms & facilities' },
-                  { icon: 'M5 13l4 4L19 7', text: 'Dedicated training equipment' },
-                ].map((feature, index) => (
+              {features.length > 0 && <div className="space-y-4 mb-8">
+                {features.map((text, index) => (
                   <div key={index} className="flex items-center gap-3">
                     <div className="w-6 h-6 rounded-full bg-accent-gold/20 flex items-center justify-center flex-shrink-0">
                       <svg className="w-4 h-4 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={feature.icon} />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <span className="text-white/70">{feature.text}</span>
+                    <span className="text-white/70">{text}</span>
                   </div>
                 ))}
-              </div>
+              </div>}
 
-              {/* GPS Coordinates */}
               <div className="p-6 bg-surface-dark rounded-xl border border-white/5">
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div>
@@ -175,8 +161,8 @@ class TrainingGroundSection extends Component {
                       GPS Coordinates
                     </p>
                     <p className="text-white font-mono text-lg">
-                      {coordinates.lat}°{coordinates.latDir},{' '}
-                      {coordinates.lng}°{coordinates.lngDir}
+                      {lat}°{latDir},{' '}
+                      {lng}°{lngDir}
                     </p>
                   </div>
                   <a

@@ -7,6 +7,7 @@ import StatSlider from './components/StatSlider';
 import { supabase } from '../../services/supabase';
 import { setUser } from '../../redux/slices/authSlice';
 import { createNotification } from '../../services/notificationService';
+import CountrySelect from '../../components/common/CountrySelect';
 
 /**
  * Profile Edit page
@@ -89,14 +90,14 @@ class ProfileEdit extends Component {
 
       const profileData = {
         name: player?.name || profile?.full_name || metadata.full_name || user?.email?.split('@')[0] || 'Player',
-        email: user?.email || 'player@kaboonafc.com',
+        email: user?.email || 'player@kaboona.com',
         profilePhoto: player?.image || profile?.profile_image_url || metadata.avatar_url || null,
         position: player?.position || metadata.position || 'CAM',
         number: player?.number || metadata.jersey_number || 10,
         height: player?.height || metadata.height || '',
         weight: player?.weight || metadata.weight || '',
         preferredFoot: player?.foot ? (player.foot.charAt(0).toUpperCase() + player.foot.slice(1)) : (metadata.preferred_foot || 'Right'),
-        country: player?.country || metadata.country || 'gb',
+        country: player?.country || metadata.nationality || metadata.country || 'gb',
         alternatePositions: player?.alternate_positions || metadata.alternate_positions || [],
         skillMoves: player?.skill_moves || metadata.skill_moves || 3,
         weakFoot: player?.weak_foot || metadata.weak_foot || 3,
@@ -126,7 +127,7 @@ class ProfileEdit extends Component {
       // Fallback to metadata
       const profileData = {
         name: metadata.full_name || user?.email?.split('@')[0] || 'Player',
-        email: user?.email || 'player@kaboonafc.com',
+        email: user?.email || 'player@kaboona.com',
         profilePhoto: metadata.avatar_url || null,
         position: metadata.position || 'CAM',
         number: metadata.jersey_number || 10,
@@ -558,86 +559,6 @@ class ProfileEdit extends Component {
     const positions = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
     const isGoalkeeper = formData.position === 'GK';
 
-    const countries = [
-      { code: 'af', name: 'Afghanistan', flag: '\u{1F1E6}\u{1F1EB}' },
-      { code: 'al', name: 'Albania', flag: '\u{1F1E6}\u{1F1F1}' },
-      { code: 'dz', name: 'Algeria', flag: '\u{1F1E9}\u{1F1FF}' },
-      { code: 'ar', name: 'Argentina', flag: '\u{1F1E6}\u{1F1F7}' },
-      { code: 'au', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}' },
-      { code: 'at', name: 'Austria', flag: '\u{1F1E6}\u{1F1F9}' },
-      { code: 'be', name: 'Belgium', flag: '\u{1F1E7}\u{1F1EA}' },
-      { code: 'br', name: 'Brazil', flag: '\u{1F1E7}\u{1F1F7}' },
-      { code: 'bg', name: 'Bulgaria', flag: '\u{1F1E7}\u{1F1EC}' },
-      { code: 'cm', name: 'Cameroon', flag: '\u{1F1E8}\u{1F1F2}' },
-      { code: 'ca', name: 'Canada', flag: '\u{1F1E8}\u{1F1E6}' },
-      { code: 'cl', name: 'Chile', flag: '\u{1F1E8}\u{1F1F1}' },
-      { code: 'cn', name: 'China', flag: '\u{1F1E8}\u{1F1F3}' },
-      { code: 'co', name: 'Colombia', flag: '\u{1F1E8}\u{1F1F4}' },
-      { code: 'cr', name: 'Costa Rica', flag: '\u{1F1E8}\u{1F1F7}' },
-      { code: 'hr', name: 'Croatia', flag: '\u{1F1ED}\u{1F1F7}' },
-      { code: 'cz', name: 'Czech Republic', flag: '\u{1F1E8}\u{1F1FF}' },
-      { code: 'dk', name: 'Denmark', flag: '\u{1F1E9}\u{1F1F0}' },
-      { code: 'ec', name: 'Ecuador', flag: '\u{1F1EA}\u{1F1E8}' },
-      { code: 'eg', name: 'Egypt', flag: '\u{1F1EA}\u{1F1EC}' },
-      { code: 'gb-eng', name: 'England', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
-      { code: 'fi', name: 'Finland', flag: '\u{1F1EB}\u{1F1EE}' },
-      { code: 'fr', name: 'France', flag: '\u{1F1EB}\u{1F1F7}' },
-      { code: 'de', name: 'Germany', flag: '\u{1F1E9}\u{1F1EA}' },
-      { code: 'gh', name: 'Ghana', flag: '\u{1F1EC}\u{1F1ED}' },
-      { code: 'gr', name: 'Greece', flag: '\u{1F1EC}\u{1F1F7}' },
-      { code: 'hu', name: 'Hungary', flag: '\u{1F1ED}\u{1F1FA}' },
-      { code: 'is', name: 'Iceland', flag: '\u{1F1EE}\u{1F1F8}' },
-      { code: 'in', name: 'India', flag: '\u{1F1EE}\u{1F1F3}' },
-      { code: 'id', name: 'Indonesia', flag: '\u{1F1EE}\u{1F1E9}' },
-      { code: 'ir', name: 'Iran', flag: '\u{1F1EE}\u{1F1F7}' },
-      { code: 'ie', name: 'Ireland', flag: '\u{1F1EE}\u{1F1EA}' },
-      { code: 'il', name: 'Israel', flag: '\u{1F1EE}\u{1F1F1}' },
-      { code: 'it', name: 'Italy', flag: '\u{1F1EE}\u{1F1F9}' },
-      { code: 'ci', name: 'Ivory Coast', flag: '\u{1F1E8}\u{1F1EE}' },
-      { code: 'jp', name: 'Japan', flag: '\u{1F1EF}\u{1F1F5}' },
-      { code: 'ke', name: 'Kenya', flag: '\u{1F1F0}\u{1F1EA}' },
-      { code: 'kr', name: 'South Korea', flag: '\u{1F1F0}\u{1F1F7}' },
-      { code: 'my', name: 'Malaysia', flag: '\u{1F1F2}\u{1F1FE}' },
-      { code: 'mx', name: 'Mexico', flag: '\u{1F1F2}\u{1F1FD}' },
-      { code: 'ma', name: 'Morocco', flag: '\u{1F1F2}\u{1F1E6}' },
-      { code: 'nl', name: 'Netherlands', flag: '\u{1F1F3}\u{1F1F1}' },
-      { code: 'nz', name: 'New Zealand', flag: '\u{1F1F3}\u{1F1FF}' },
-      { code: 'ng', name: 'Nigeria', flag: '\u{1F1F3}\u{1F1EC}' },
-      { code: 'no', name: 'Norway', flag: '\u{1F1F3}\u{1F1F4}' },
-      { code: 'pk', name: 'Pakistan', flag: '\u{1F1F5}\u{1F1F0}' },
-      { code: 'pa', name: 'Panama', flag: '\u{1F1F5}\u{1F1E6}' },
-      { code: 'py', name: 'Paraguay', flag: '\u{1F1F5}\u{1F1FE}' },
-      { code: 'pe', name: 'Peru', flag: '\u{1F1F5}\u{1F1EA}' },
-      { code: 'ph', name: 'Philippines', flag: '\u{1F1F5}\u{1F1ED}' },
-      { code: 'pl', name: 'Poland', flag: '\u{1F1F5}\u{1F1F1}' },
-      { code: 'pt', name: 'Portugal', flag: '\u{1F1F5}\u{1F1F9}' },
-      { code: 'qa', name: 'Qatar', flag: '\u{1F1F6}\u{1F1E6}' },
-      { code: 'ro', name: 'Romania', flag: '\u{1F1F7}\u{1F1F4}' },
-      { code: 'ru', name: 'Russia', flag: '\u{1F1F7}\u{1F1FA}' },
-      { code: 'sa', name: 'Saudi Arabia', flag: '\u{1F1F8}\u{1F1E6}' },
-      { code: 'gb-sct', name: 'Scotland', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}' },
-      { code: 'sn', name: 'Senegal', flag: '\u{1F1F8}\u{1F1F3}' },
-      { code: 'rs', name: 'Serbia', flag: '\u{1F1F7}\u{1F1F8}' },
-      { code: 'sg', name: 'Singapore', flag: '\u{1F1F8}\u{1F1EC}' },
-      { code: 'sk', name: 'Slovakia', flag: '\u{1F1F8}\u{1F1F0}' },
-      { code: 'si', name: 'Slovenia', flag: '\u{1F1F8}\u{1F1EE}' },
-      { code: 'za', name: 'South Africa', flag: '\u{1F1FF}\u{1F1E6}' },
-      { code: 'es', name: 'Spain', flag: '\u{1F1EA}\u{1F1F8}' },
-      { code: 'se', name: 'Sweden', flag: '\u{1F1F8}\u{1F1EA}' },
-      { code: 'ch', name: 'Switzerland', flag: '\u{1F1E8}\u{1F1ED}' },
-      { code: 'th', name: 'Thailand', flag: '\u{1F1F9}\u{1F1ED}' },
-      { code: 'tn', name: 'Tunisia', flag: '\u{1F1F9}\u{1F1F3}' },
-      { code: 'tr', name: 'Turkey', flag: '\u{1F1F9}\u{1F1F7}' },
-      { code: 'ua', name: 'Ukraine', flag: '\u{1F1FA}\u{1F1E6}' },
-      { code: 'ae', name: 'United Arab Emirates', flag: '\u{1F1E6}\u{1F1EA}' },
-      { code: 'gb', name: 'United Kingdom', flag: '\u{1F1EC}\u{1F1E7}' },
-      { code: 'us', name: 'United States', flag: '\u{1F1FA}\u{1F1F8}' },
-      { code: 'uy', name: 'Uruguay', flag: '\u{1F1FA}\u{1F1FE}' },
-      { code: 've', name: 'Venezuela', flag: '\u{1F1FB}\u{1F1EA}' },
-      { code: 'vn', name: 'Vietnam', flag: '\u{1F1FB}\u{1F1F3}' },
-      { code: 'gb-wls', name: 'Wales', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}' },
-    ];
-
     const statsConfig = isGoalkeeper
       ? [
           { name: 'diving', label: 'DIV - Diving', description: 'Shot stopping ability' },
@@ -795,18 +716,12 @@ class ProfileEdit extends Component {
                     {/* Country */}
                     <div>
                       <label className="block text-white/60 text-sm mb-2">Country</label>
-                      <select
+                      <CountrySelect
                         name="country"
                         value={formData.country}
                         onChange={this.handleInputChange}
-                        className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors appearance-none cursor-pointer"
-                      >
-                        {countries.map((country) => (
-                          <option key={country.code} value={country.code}>
-                            {country.flag} {country.name}
-                          </option>
-                        ))}
-                      </select>
+                        placeholder="Select your country"
+                      />
                     </div>
                   </div>
                 </motion.div>
@@ -1035,86 +950,6 @@ class ProfileEdit extends Component {
     // Normal edit mode (unchanged from original)
     const positions = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LM', 'RM', 'LW', 'RW', 'CF', 'ST'];
     const isGoalkeeper = formData.position === 'GK';
-
-    const countries = [
-      { code: 'af', name: 'Afghanistan', flag: '\u{1F1E6}\u{1F1EB}' },
-      { code: 'al', name: 'Albania', flag: '\u{1F1E6}\u{1F1F1}' },
-      { code: 'dz', name: 'Algeria', flag: '\u{1F1E9}\u{1F1FF}' },
-      { code: 'ar', name: 'Argentina', flag: '\u{1F1E6}\u{1F1F7}' },
-      { code: 'au', name: 'Australia', flag: '\u{1F1E6}\u{1F1FA}' },
-      { code: 'at', name: 'Austria', flag: '\u{1F1E6}\u{1F1F9}' },
-      { code: 'be', name: 'Belgium', flag: '\u{1F1E7}\u{1F1EA}' },
-      { code: 'br', name: 'Brazil', flag: '\u{1F1E7}\u{1F1F7}' },
-      { code: 'bg', name: 'Bulgaria', flag: '\u{1F1E7}\u{1F1EC}' },
-      { code: 'cm', name: 'Cameroon', flag: '\u{1F1E8}\u{1F1F2}' },
-      { code: 'ca', name: 'Canada', flag: '\u{1F1E8}\u{1F1E6}' },
-      { code: 'cl', name: 'Chile', flag: '\u{1F1E8}\u{1F1F1}' },
-      { code: 'cn', name: 'China', flag: '\u{1F1E8}\u{1F1F3}' },
-      { code: 'co', name: 'Colombia', flag: '\u{1F1E8}\u{1F1F4}' },
-      { code: 'cr', name: 'Costa Rica', flag: '\u{1F1E8}\u{1F1F7}' },
-      { code: 'hr', name: 'Croatia', flag: '\u{1F1ED}\u{1F1F7}' },
-      { code: 'cz', name: 'Czech Republic', flag: '\u{1F1E8}\u{1F1FF}' },
-      { code: 'dk', name: 'Denmark', flag: '\u{1F1E9}\u{1F1F0}' },
-      { code: 'ec', name: 'Ecuador', flag: '\u{1F1EA}\u{1F1E8}' },
-      { code: 'eg', name: 'Egypt', flag: '\u{1F1EA}\u{1F1EC}' },
-      { code: 'gb-eng', name: 'England', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0065}\u{E006E}\u{E0067}\u{E007F}' },
-      { code: 'fi', name: 'Finland', flag: '\u{1F1EB}\u{1F1EE}' },
-      { code: 'fr', name: 'France', flag: '\u{1F1EB}\u{1F1F7}' },
-      { code: 'de', name: 'Germany', flag: '\u{1F1E9}\u{1F1EA}' },
-      { code: 'gh', name: 'Ghana', flag: '\u{1F1EC}\u{1F1ED}' },
-      { code: 'gr', name: 'Greece', flag: '\u{1F1EC}\u{1F1F7}' },
-      { code: 'hu', name: 'Hungary', flag: '\u{1F1ED}\u{1F1FA}' },
-      { code: 'is', name: 'Iceland', flag: '\u{1F1EE}\u{1F1F8}' },
-      { code: 'in', name: 'India', flag: '\u{1F1EE}\u{1F1F3}' },
-      { code: 'id', name: 'Indonesia', flag: '\u{1F1EE}\u{1F1E9}' },
-      { code: 'ir', name: 'Iran', flag: '\u{1F1EE}\u{1F1F7}' },
-      { code: 'ie', name: 'Ireland', flag: '\u{1F1EE}\u{1F1EA}' },
-      { code: 'il', name: 'Israel', flag: '\u{1F1EE}\u{1F1F1}' },
-      { code: 'it', name: 'Italy', flag: '\u{1F1EE}\u{1F1F9}' },
-      { code: 'ci', name: 'Ivory Coast', flag: '\u{1F1E8}\u{1F1EE}' },
-      { code: 'jp', name: 'Japan', flag: '\u{1F1EF}\u{1F1F5}' },
-      { code: 'ke', name: 'Kenya', flag: '\u{1F1F0}\u{1F1EA}' },
-      { code: 'kr', name: 'South Korea', flag: '\u{1F1F0}\u{1F1F7}' },
-      { code: 'my', name: 'Malaysia', flag: '\u{1F1F2}\u{1F1FE}' },
-      { code: 'mx', name: 'Mexico', flag: '\u{1F1F2}\u{1F1FD}' },
-      { code: 'ma', name: 'Morocco', flag: '\u{1F1F2}\u{1F1E6}' },
-      { code: 'nl', name: 'Netherlands', flag: '\u{1F1F3}\u{1F1F1}' },
-      { code: 'nz', name: 'New Zealand', flag: '\u{1F1F3}\u{1F1FF}' },
-      { code: 'ng', name: 'Nigeria', flag: '\u{1F1F3}\u{1F1EC}' },
-      { code: 'no', name: 'Norway', flag: '\u{1F1F3}\u{1F1F4}' },
-      { code: 'pk', name: 'Pakistan', flag: '\u{1F1F5}\u{1F1F0}' },
-      { code: 'pa', name: 'Panama', flag: '\u{1F1F5}\u{1F1E6}' },
-      { code: 'py', name: 'Paraguay', flag: '\u{1F1F5}\u{1F1FE}' },
-      { code: 'pe', name: 'Peru', flag: '\u{1F1F5}\u{1F1EA}' },
-      { code: 'ph', name: 'Philippines', flag: '\u{1F1F5}\u{1F1ED}' },
-      { code: 'pl', name: 'Poland', flag: '\u{1F1F5}\u{1F1F1}' },
-      { code: 'pt', name: 'Portugal', flag: '\u{1F1F5}\u{1F1F9}' },
-      { code: 'qa', name: 'Qatar', flag: '\u{1F1F6}\u{1F1E6}' },
-      { code: 'ro', name: 'Romania', flag: '\u{1F1F7}\u{1F1F4}' },
-      { code: 'ru', name: 'Russia', flag: '\u{1F1F7}\u{1F1FA}' },
-      { code: 'sa', name: 'Saudi Arabia', flag: '\u{1F1F8}\u{1F1E6}' },
-      { code: 'gb-sct', name: 'Scotland', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0073}\u{E0063}\u{E0074}\u{E007F}' },
-      { code: 'sn', name: 'Senegal', flag: '\u{1F1F8}\u{1F1F3}' },
-      { code: 'rs', name: 'Serbia', flag: '\u{1F1F7}\u{1F1F8}' },
-      { code: 'sg', name: 'Singapore', flag: '\u{1F1F8}\u{1F1EC}' },
-      { code: 'sk', name: 'Slovakia', flag: '\u{1F1F8}\u{1F1F0}' },
-      { code: 'si', name: 'Slovenia', flag: '\u{1F1F8}\u{1F1EE}' },
-      { code: 'za', name: 'South Africa', flag: '\u{1F1FF}\u{1F1E6}' },
-      { code: 'es', name: 'Spain', flag: '\u{1F1EA}\u{1F1F8}' },
-      { code: 'se', name: 'Sweden', flag: '\u{1F1F8}\u{1F1EA}' },
-      { code: 'ch', name: 'Switzerland', flag: '\u{1F1E8}\u{1F1ED}' },
-      { code: 'th', name: 'Thailand', flag: '\u{1F1F9}\u{1F1ED}' },
-      { code: 'tn', name: 'Tunisia', flag: '\u{1F1F9}\u{1F1F3}' },
-      { code: 'tr', name: 'Turkey', flag: '\u{1F1F9}\u{1F1F7}' },
-      { code: 'ua', name: 'Ukraine', flag: '\u{1F1FA}\u{1F1E6}' },
-      { code: 'ae', name: 'United Arab Emirates', flag: '\u{1F1E6}\u{1F1EA}' },
-      { code: 'gb', name: 'United Kingdom', flag: '\u{1F1EC}\u{1F1E7}' },
-      { code: 'us', name: 'United States', flag: '\u{1F1FA}\u{1F1F8}' },
-      { code: 'uy', name: 'Uruguay', flag: '\u{1F1FA}\u{1F1FE}' },
-      { code: 've', name: 'Venezuela', flag: '\u{1F1FB}\u{1F1EA}' },
-      { code: 'vn', name: 'Vietnam', flag: '\u{1F1FB}\u{1F1F3}' },
-      { code: 'gb-wls', name: 'Wales', flag: '\u{1F3F4}\u{E0067}\u{E0062}\u{E0077}\u{E006C}\u{E0073}\u{E007F}' },
-    ];
 
     // Stats configuration based on position
     const statsConfig = isGoalkeeper
@@ -1460,18 +1295,12 @@ class ProfileEdit extends Component {
                   {/* Country */}
                   <div>
                     <label className="block text-white/60 text-sm mb-2">Country</label>
-                    <select
+                    <CountrySelect
                       name="country"
                       value={formData.country}
                       onChange={this.handleInputChange}
-                      className="w-full px-4 py-3 bg-surface-dark border border-white/20 rounded-lg text-white focus:outline-none focus:border-accent-gold transition-colors appearance-none cursor-pointer"
-                    >
-                      {countries.map((country) => (
-                        <option key={country.code} value={country.code}>
-                          {country.flag} {country.name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Select your country"
+                    />
                   </div>
 
                   {/* Skill Moves */}
@@ -1567,7 +1396,7 @@ class ProfileEdit extends Component {
                 </div>
               </motion.div>
 
-              {/* Subscription Management */}
+              {/* Subscription Management
               <motion.div
                 className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
@@ -1617,6 +1446,7 @@ class ProfileEdit extends Component {
                   </div>
                 </div>
               </motion.div>
+              */}
             </div>
           </div>
         </div>

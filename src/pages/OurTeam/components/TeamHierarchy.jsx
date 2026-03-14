@@ -25,8 +25,6 @@ class TeamHierarchy extends Component {
   };
 
   handleOwnerClick = (owner) => {
-    if (owner.isPlaceholder) return;
-
     const { openPlayerModal } = this.context || {};
     if (openPlayerModal) {
       // Convert owner to player-like format for modal
@@ -51,7 +49,7 @@ class TeamHierarchy extends Component {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
         transition={{ duration: 0.6 }}
-        className="relative"
+        className="relative overflow-visible"
       >
         <motion.div
           className={`relative mx-auto max-w-md ${isClickable ? 'cursor-pointer' : ''}`}
@@ -213,8 +211,26 @@ class TeamHierarchy extends Component {
     );
   };
 
-  renderTreeLines = (coachCount) => {
-    // SVG tree lines connecting owner to coaches
+  renderTreeLines = (childCount) => {
+    if (childCount === 0) return null;
+
+    // Calculate evenly spaced x positions for children
+    const svgWidth = 600;
+    const margin = 100;
+    const usableWidth = svgWidth - margin * 2;
+    const positions = [];
+
+    if (childCount === 1) {
+      positions.push(svgWidth / 2);
+    } else {
+      for (let i = 0; i < childCount; i++) {
+        positions.push(margin + (usableWidth * i) / (childCount - 1));
+      }
+    }
+
+    const leftmost = positions[0];
+    const rightmost = positions[positions.length - 1];
+
     return (
       <div className="relative h-16 flex justify-center">
         <svg
@@ -225,82 +241,99 @@ class TeamHierarchy extends Component {
         >
           {/* Vertical line from owner */}
           <motion.line
-            x1="300"
-            y1="0"
-            x2="300"
-            y2="30"
-            stroke="#D4AF37"
-            strokeWidth="2"
+            x1="300" y1="0" x2="300" y2="30"
+            stroke="#D4AF37" strokeWidth="2"
             initial={{ pathLength: 0 }}
             whileInView={{ pathLength: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           />
-
           {/* Horizontal line */}
-          <motion.line
-            x1={coachCount === 1 ? 300 : 100}
-            y1="30"
-            x2={coachCount === 1 ? 300 : 500}
-            y2="30"
-            stroke="#D4AF37"
-            strokeWidth="2"
-            initial={{ pathLength: 0 }}
-            whileInView={{ pathLength: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          />
-
-          {/* Vertical lines to coaches */}
-          {coachCount >= 1 && (
+          {childCount > 1 && (
             <motion.line
-              x1={coachCount === 1 ? 300 : 100}
-              y1="30"
-              x2={coachCount === 1 ? 300 : 100}
-              y2="60"
-              stroke="#D4AF37"
-              strokeWidth="2"
+              x1={leftmost} y1="30" x2={rightmost} y2="30"
+              stroke="#D4AF37" strokeWidth="2"
               initial={{ pathLength: 0 }}
               whileInView={{ pathLength: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.3, delay: 0.6 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
             />
           )}
-          {coachCount >= 2 && (
+          {/* Vertical lines to each child */}
+          {positions.map((x, i) => (
             <motion.line
-              x1="300"
-              y1="30"
-              x2="300"
-              y2="60"
-              stroke="#D4AF37"
-              strokeWidth="2"
+              key={i}
+              x1={x} y1="30" x2={x} y2="60"
+              stroke="#D4AF37" strokeWidth="2"
               initial={{ pathLength: 0 }}
               whileInView={{ pathLength: 1 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.3, delay: 0.7 }}
+              transition={{ duration: 0.3, delay: 0.6 + i * 0.1 }}
             />
-          )}
-          {coachCount >= 3 && (
-            <motion.line
-              x1="500"
-              y1="30"
-              x2="500"
-              y2="60"
-              stroke="#D4AF37"
-              strokeWidth="2"
-              initial={{ pathLength: 0 }}
-              whileInView={{ pathLength: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.3, delay: 0.8 }}
-            />
-          )}
+          ))}
         </svg>
       </div>
     );
   };
 
+  renderManagementCard = (member, index) => {
+    const { hoveredId } = this.state;
+    const isHovered = hoveredId === member.id;
+
+    return (
+      <motion.div
+        key={member.id}
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.5, delay: 0.1 * index }}
+        className="relative"
+        onMouseEnter={() => this.handleMouseEnter(member.id)}
+        onMouseLeave={this.handleMouseLeave}
+      >
+        <motion.div
+          className={`relative bg-surface-dark-elevated rounded-xl overflow-hidden border transition-all duration-300 ${
+            isHovered
+              ? 'border-blue-400 shadow-[0_0_25px_rgba(96,165,250,0.3)]'
+              : 'border-surface-dark-hover'
+          }`}
+          whileHover={{ y: -5 }}
+        >
+          <div className="p-5">
+            {/* Avatar */}
+            <div className="w-16 h-16 mx-auto mb-3 rounded-full overflow-hidden border-2 border-blue-400/50">
+              {member.image ? (
+                <img
+                  src={member.image}
+                  alt={member.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-surface-dark to-surface-dark-elevated flex items-center justify-center">
+                  <span className="text-xl font-display font-bold text-blue-400">
+                    {member.name.charAt(0)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Info */}
+            <div className="text-center">
+              <span className="inline-block px-2 py-0.5 mb-2 text-[10px] font-semibold uppercase tracking-wider bg-blue-400/10 text-blue-400 rounded-full">
+                {member.role}
+              </span>
+              <h4 className="text-base font-display font-bold text-white">
+                {member.name}
+              </h4>
+            </div>
+          </div>
+        </motion.div>
+      </motion.div>
+    );
+  };
+
   render() {
-    const { owner, coaches } = this.props;
+    const { owner, coaches, management = [], marketing = [] } = this.props;
 
     return (
       <section className="py-16 px-4 relative bg-surface-dark">
@@ -329,19 +362,107 @@ class TeamHierarchy extends Component {
             <div className="w-24 h-1 bg-gradient-to-r from-transparent via-accent-gold to-transparent mx-auto" />
           </motion.div>
 
+          {!owner && coaches.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-white/40">No staff data available yet</p>
+            </div>
+          )}
+
           {/* Owner Card */}
           {owner && this.renderOwnerCard(owner)}
 
-          {/* Tree Lines */}
+          {/* Tree Lines to Coaches */}
           {coaches && coaches.length > 0 && this.renderTreeLines(coaches.length)}
 
           {/* Coaches Row */}
           {coaches && coaches.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className={`grid gap-6 max-w-3xl mx-auto ${
+              coaches.length === 1 ? 'grid-cols-1 max-w-xs' :
+              coaches.length === 2 ? 'grid-cols-2 max-w-lg' :
+              'grid-cols-2 md:grid-cols-3'
+            }`}>
               {coaches.map((coach, index) =>
                 this.renderCoachCard(coach, index, coaches.length)
               )}
             </div>
+          )}
+
+          {/* Management / Admin Row */}
+          {management.length > 0 && (
+            <>
+              {/* Connector line */}
+              <div className="relative h-12 flex justify-center">
+                <svg className="absolute top-0 w-full max-w-3xl h-12" viewBox="0 0 600 48" preserveAspectRatio="none" fill="none">
+                  <motion.line
+                    x1="300" y1="0" x2="300" y2="48"
+                    stroke="#60A5FA" strokeWidth="2" strokeDasharray="4 4"
+                    initial={{ pathLength: 0 }}
+                    whileInView={{ pathLength: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </svg>
+              </div>
+
+              {/* Management Section Label */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-6"
+              >
+                <span className="inline-block px-4 py-1.5 text-xs font-semibold uppercase tracking-wider bg-blue-400/10 text-blue-400 rounded-full border border-blue-400/20">
+                  Management & Administration
+                </span>
+              </motion.div>
+
+              <div className={`grid gap-6 max-w-3xl mx-auto ${
+                management.length === 1 ? 'grid-cols-1 max-w-xs' :
+                management.length === 2 ? 'grid-cols-2 max-w-lg' :
+                'grid-cols-2 md:grid-cols-3'
+              }`}>
+                {management.map((member, index) =>
+                  this.renderManagementCard(member, index)
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Marketing & Content Row */}
+          {marketing.length > 0 && (
+            <>
+              <div className="relative h-12 flex justify-center">
+                <svg className="absolute top-0 w-full max-w-3xl h-12" viewBox="0 0 600 48" preserveAspectRatio="none" fill="none">
+                  <motion.line
+                    x1="300" y1="0" x2="300" y2="48"
+                    stroke="#10B981" strokeWidth="2" strokeDasharray="4 4"
+                    initial={{ pathLength: 0 }}
+                    whileInView={{ pathLength: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.5 }}
+                  />
+                </svg>
+              </div>
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-6"
+              >
+                <span className="inline-block px-4 py-1.5 text-xs font-semibold uppercase tracking-wider bg-emerald-400/10 text-emerald-400 rounded-full border border-emerald-400/20">
+                  Marketing & Content
+                </span>
+              </motion.div>
+              <div className={`grid gap-6 max-w-3xl mx-auto ${
+                marketing.length === 1 ? 'grid-cols-1 max-w-xs' :
+                marketing.length === 2 ? 'grid-cols-2 max-w-lg' :
+                'grid-cols-2 md:grid-cols-3'
+              }`}>
+                {marketing.map((member, index) =>
+                  this.renderManagementCard(member, index)
+                )}
+              </div>
+            </>
           )}
         </div>
       </section>

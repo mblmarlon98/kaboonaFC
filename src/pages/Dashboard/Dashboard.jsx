@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
+import Navbar from '../../components/Layout/Navbar';
 import DashboardSidebar from './DashboardSidebar';
 import DashboardHeader from './DashboardHeader';
 import { getCurrentUser } from '../../services/auth';
@@ -212,71 +213,76 @@ class Dashboard extends Component {
     const superAdmin = this.isSuperAdmin();
 
     return (
-      <div className="min-h-screen bg-surface-dark flex">
-        {/* Sidebar */}
-        <DashboardSidebar
-          user={user}
-          collapsed={sidebarCollapsed}
-          onToggle={this.toggleSidebar}
-          mobileOpen={mobileOpen}
-          onMobileClose={this.closeMobileSidebar}
-        />
+      <div className="min-h-screen bg-surface-dark">
+        {/* Top Navbar */}
+        <Navbar />
 
-        {/* Main Content Area */}
-        <div
-          className={`flex-1 transition-all duration-300 ${
-            sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
-          } ml-0`}
-        >
-          {/* Header */}
-          <DashboardHeader
+        <div className="flex pt-16 md:pt-20">
+          {/* Sidebar */}
+          <DashboardSidebar
             user={user}
-            sidebarCollapsed={sidebarCollapsed}
-            onToggleSidebar={this.toggleSidebar}
+            collapsed={sidebarCollapsed}
+            onToggle={this.toggleSidebar}
+            mobileOpen={mobileOpen}
+            onMobileClose={this.closeMobileSidebar}
           />
 
-          {/* Page Content */}
-          <main className="p-4 md:p-6">
-            <Routes>
-              {/* Overview */}
-              <Route index element={<DashboardHome />} />
-              <Route path="calendar" element={<Calendar userRoles={user?.roles} user={user} />} />
+          {/* Main Content Area */}
+          <div
+            className={`flex-1 transition-all duration-300 ${
+              sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
+            } ml-0`}
+          >
+            {/* Header */}
+            <DashboardHeader
+              user={user}
+              sidebarCollapsed={sidebarCollapsed}
+              onToggleSidebar={this.toggleSidebar}
+            />
 
-              {/* Coaching */}
-              <Route path="training" element={<TrainingScheduler />} />
-              <Route path="matches" element={<MatchScheduler />} />
-              <Route path="formation" element={<FormationBuilder />} />
-              <Route path="squad" element={<SquadSelection />} />
-              <Route path="match-evaluation" element={<MatchEvaluation />} />
-              <Route path="attendance" element={<PlayerAttendance />} />
-              <Route path="player-notes" element={<PlayerNotes />} />
+            {/* Page Content */}
+            <main className="p-4 md:p-6">
+              <Routes>
+                {/* Overview */}
+                <Route index element={<DashboardHome />} />
+                <Route path="calendar" element={<Calendar userRoles={user?.roles} user={user} />} />
 
-              {/* Marketing & Content */}
-              <Route path="content" element={<ContentManagement />} />
-              <Route path="events" element={<EventsManagement />} />
+                {/* Coaching */}
+                <Route path="training" element={<TrainingScheduler />} />
+                <Route path="matches" element={<MatchScheduler />} />
+                <Route path="formation" element={<FormationBuilder />} />
+                <Route path="squad" element={<SquadSelection />} />
+                <Route path="match-evaluation" element={<MatchEvaluation />} />
+                <Route path="attendance" element={<PlayerAttendance />} />
+                <Route path="player-notes" element={<PlayerNotes />} />
 
-              {/* Finance */}
-              <Route path="payments" element={<PaymentsOverview />} />
-              <Route path="investors" element={<InvestorsManagement />} />
+                {/* Marketing & Content */}
+                <Route path="content" element={<ContentManagement user={user} />} />
+                <Route path="events" element={<EventsManagement />} />
 
-              {/* System */}
-              <Route path="players" element={<PlayersManagement />} />
-              <Route path="staff" element={<StaffPlayerManagement user={user} isSuperAdmin={superAdmin} />} />
-              <Route path="analytics" element={<UserAnalytics />} />
-              <Route path="activity-log" element={<ActivityLog />} />
+                {/* Finance */}
+                <Route path="payments" element={<PaymentsOverview />} />
+                <Route path="investors" element={<InvestorsManagement />} />
 
-              {/* Super Admin Only */}
-              {superAdmin && (
-                <Route path="users" element={<UserManagement />} />
-              )}
-              {superAdmin && (
-                <Route path="super" element={<SuperAdminOverview />} />
-              )}
+                {/* System */}
+                <Route path="players" element={<PlayersManagement />} />
+                <Route path="staff" element={<StaffPlayerManagement user={user} isSuperAdmin={superAdmin} />} />
+                <Route path="analytics" element={<UserAnalytics />} />
+                <Route path="activity-log" element={<ActivityLog />} />
 
-              {/* Catch-all */}
-              <Route path="*" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </main>
+                {/* Super Admin Only */}
+                {superAdmin && (
+                  <Route path="users" element={<UserManagement />} />
+                )}
+                {superAdmin && (
+                  <Route path="super" element={<SuperAdminOverview />} />
+                )}
+
+                {/* Catch-all */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </Routes>
+            </main>
+          </div>
         </div>
       </div>
     );

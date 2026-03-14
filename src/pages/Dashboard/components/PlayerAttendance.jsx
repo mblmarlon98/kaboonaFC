@@ -37,25 +37,55 @@ class PlayerAttendance extends Component {
   fetchData = async () => {
     this.setState({ loading: true, error: null });
     try {
-      const [trainingsRes, matchesRes] = await Promise.all([
+      // Fetch trainings, matches, and invitations separately
+      // (event_invitations uses polymorphic event_type+event_id, no direct FK)
+      const [trainingsRes, matchesRes, trainingInvRes, matchInvRes] = await Promise.all([
         supabase
           .from('training_sessions')
-          .select('*, event_invitations(*, profiles(full_name, profile_image_url))')
+          .select('*')
           .order('session_date', { ascending: false }),
         supabase
           .from('matches')
-          .select('*, event_invitations(*, profiles(full_name, profile_image_url))')
+          .select('*')
           .order('match_date', { ascending: false }),
+        supabase
+          .from('event_invitations')
+          .select('*, profiles(full_name, profile_image_url)')
+          .eq('event_type', 'training'),
+        supabase
+          .from('event_invitations')
+          .select('*, profiles(full_name, profile_image_url)')
+          .eq('event_type', 'match'),
       ]);
 
       if (trainingsRes.error) throw trainingsRes.error;
       if (matchesRes.error) throw matchesRes.error;
+      if (trainingInvRes.error) throw trainingInvRes.error;
+      if (matchInvRes.error) throw matchInvRes.error;
 
-      this.setState({
-        trainings: trainingsRes.data || [],
-        matches: matchesRes.data || [],
-        loading: false,
+      // Group invitations by event_id
+      const trainingInvByEvent = {};
+      (trainingInvRes.data || []).forEach((inv) => {
+        if (!trainingInvByEvent[inv.event_id]) trainingInvByEvent[inv.event_id] = [];
+        trainingInvByEvent[inv.event_id].push(inv);
       });
+      const matchInvByEvent = {};
+      (matchInvRes.data || []).forEach((inv) => {
+        if (!matchInvByEvent[inv.event_id]) matchInvByEvent[inv.event_id] = [];
+        matchInvByEvent[inv.event_id].push(inv);
+      });
+
+      // Attach invitations to their events
+      const trainings = (trainingsRes.data || []).map((t) => ({
+        ...t,
+        event_invitations: trainingInvByEvent[t.id] || [],
+      }));
+      const matches = (matchesRes.data || []).map((m) => ({
+        ...m,
+        event_invitations: matchInvByEvent[m.id] || [],
+      }));
+
+      this.setState({ trainings, matches, loading: false });
     } catch (err) {
       console.error('Error fetching attendance data:', err);
       this.setState({ error: err.message, loading: false });

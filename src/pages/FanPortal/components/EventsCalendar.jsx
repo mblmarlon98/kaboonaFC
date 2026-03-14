@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../../services/supabase';
+import MonthGrid from '../../Dashboard/components/MonthGrid';
 
 const TYPE_CONFIG = {
   training: {
@@ -31,8 +32,8 @@ class EventsCalendar extends Component {
       loading: true,
       error: null,
       expandedId: null,
-      view: 'list', // 'list' | 'calendar'
-      calendarMonth: new Date(),
+      view: 'calendar', // 'list' | 'calendar'
+      calendarMonth: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
     };
   }
 
@@ -167,80 +168,10 @@ class EventsCalendar extends Component {
 
   renderCalendarGrid = () => {
     const { events, calendarMonth } = this.state;
-    const year = calendarMonth.getFullYear();
-    const month = calendarMonth.getMonth();
-
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startOffset = firstDay.getDay(); // 0=Sun
-    const totalDays = lastDay.getDate();
-
     const monthLabel = calendarMonth.toLocaleDateString('en-GB', {
       month: 'long',
       year: 'numeric',
     });
-
-    // Group events by date key (YYYY-MM-DD)
-    const eventsByDate = {};
-    events.forEach((ev) => {
-      const d = new Date(ev.date);
-      if (d.getFullYear() === year && d.getMonth() === month) {
-        const key = d.getDate();
-        if (!eventsByDate[key]) eventsByDate[key] = [];
-        eventsByDate[key].push(ev);
-      }
-    });
-
-    const cells = [];
-    // Empty cells before first day
-    for (let i = 0; i < startOffset; i++) {
-      cells.push(<div key={`empty-${i}`} className="h-20 bg-white/5 rounded-lg" />);
-    }
-    // Day cells
-    for (let day = 1; day <= totalDays; day++) {
-      const dayEvents = eventsByDate[day] || [];
-      const isToday =
-        new Date().getFullYear() === year &&
-        new Date().getMonth() === month &&
-        new Date().getDate() === day;
-
-      cells.push(
-        <div
-          key={day}
-          className={`h-20 rounded-lg p-1.5 border transition-colors ${
-            isToday
-              ? 'border-accent-gold/50 bg-accent-gold/5'
-              : 'border-white/5 bg-white/5 hover:border-white/10'
-          }`}
-        >
-          <span
-            className={`text-xs font-medium ${
-              isToday ? 'text-accent-gold' : 'text-white/50'
-            }`}
-          >
-            {day}
-          </span>
-          <div className="mt-0.5 space-y-0.5 overflow-hidden">
-            {dayEvents.slice(0, 2).map((ev) => {
-              const cfg = TYPE_CONFIG[ev.eventType] || TYPE_CONFIG.event;
-              return (
-                <div
-                  key={ev.id}
-                  className={`text-[9px] px-1 py-0.5 rounded truncate ${cfg.bg} ${cfg.text}`}
-                >
-                  {ev.title}
-                </div>
-              );
-            })}
-            {dayEvents.length > 2 && (
-              <span className="text-[9px] text-white/40">
-                +{dayEvents.length - 2} more
-              </span>
-            )}
-          </div>
-        </div>
-      );
-    }
 
     return (
       <div>
@@ -263,15 +194,13 @@ class EventsCalendar extends Component {
             </svg>
           </button>
         </div>
-        {/* Day headers */}
-        <div className="grid grid-cols-7 gap-1 mb-1">
-          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((d) => (
-            <div key={d} className="text-center text-xs text-white/40 font-medium py-1">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-1">{cells}</div>
+        <MonthGrid
+          currentDate={calendarMonth}
+          events={events}
+          onEventClick={(event) => this.toggleExpand(event.id)}
+          readOnly
+          canCreateTypes={[]}
+        />
       </div>
     );
   };
@@ -332,33 +261,8 @@ class EventsCalendar extends Component {
           </div>
         )}
 
-        {/* Empty State */}
-        {!loading && !error && events.length === 0 && (
-          <div className="bg-surface-dark-elevated rounded-xl border border-gray-800 p-12 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-accent-gold/10 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-accent-gold"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </div>
-            <h3 className="text-white font-display font-bold text-lg mb-2">
-              No Upcoming Events
-            </h3>
-            <p className="text-gray-400">No upcoming events scheduled</p>
-          </div>
-        )}
-
         {/* Calendar Grid View */}
-        {!loading && !error && events.length > 0 && view === 'calendar' && (
+        {!loading && !error && view === 'calendar' && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -369,7 +273,18 @@ class EventsCalendar extends Component {
         )}
 
         {/* List View */}
-        {!loading && !error && events.length > 0 && view === 'list' && (
+        {!loading && !error && view === 'list' && events.length === 0 && (
+          <div className="bg-surface-dark-elevated rounded-xl border border-gray-800 p-12 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-accent-gold/10 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-accent-gold" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h3 className="text-white font-display font-bold text-lg mb-2">No Upcoming Events</h3>
+            <p className="text-gray-400">No upcoming events scheduled</p>
+          </div>
+        )}
+        {!loading && !error && view === 'list' && events.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {events.map((ev, index) => {
               const cfg = TYPE_CONFIG[ev.eventType] || TYPE_CONFIG.event;

@@ -17,7 +17,7 @@ class CalendarEventModal extends Component {
   constructor(props) {
     super(props);
 
-    const { event, eventType } = props;
+    const { event, eventType, defaultDate } = props;
     const isCreate = !event;
 
     this.state = {
@@ -26,18 +26,17 @@ class CalendarEventModal extends Component {
       deleting: false,
       showDeleteConfirm: false,
       error: null,
-      form: this.getInitialFormState(event, eventType),
+      form: this.getInitialFormState(event, eventType, defaultDate),
     };
   }
 
-  getInitialFormState = (event, eventType) => {
+  getInitialFormState = (event, eventType, defaultDate) => {
     if (!event) {
-      // Create mode defaults
-      const now = new Date();
-      const defaultDate = new Date(now.getTime() + 3600000);
-      const defaultDateStr = defaultDate.toISOString().split('T')[0];
-      const defaultTimeStr = `${String(defaultDate.getHours()).padStart(2, '0')}:${String(defaultDate.getMinutes()).padStart(2, '0')}`;
-      const dateStr = this.toDateTimeLocal(defaultDate);
+      // Create mode defaults — use provided date or fallback to now + 1hr
+      const targetDate = defaultDate ? new Date(defaultDate) : new Date(Date.now() + 3600000);
+      const defaultDateStr = targetDate.toISOString().split('T')[0];
+      const defaultTimeStr = `${String(targetDate.getHours()).padStart(2, '0')}:${String(targetDate.getMinutes()).padStart(2, '0')}`;
+      const dateStr = this.toDateTimeLocal(targetDate);
 
       if (eventType === 'training') {
         return { session_date: defaultDateStr, session_time: defaultTimeStr, location: '' };

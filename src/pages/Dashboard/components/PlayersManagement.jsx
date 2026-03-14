@@ -224,9 +224,9 @@ class PlayersManagement extends Component {
 
       // Handle status changes
       if (editForm.status === 'inactive' && selectedPlayer.playerId) {
-        await supabase.from('players').update({ is_retired: true }).eq('id', selectedPlayer.playerId);
+        await supabase.from('players').update({ is_retired: true, retired_at: new Date().toISOString() }).eq('id', selectedPlayer.playerId);
       } else if (editForm.status === 'active' && selectedPlayer.playerId) {
-        await supabase.from('players').update({ is_retired: false }).eq('id', selectedPlayer.playerId);
+        await supabase.from('players').update({ is_retired: false, retired_at: null }).eq('id', selectedPlayer.playerId);
       }
 
       // Update local state
@@ -296,7 +296,7 @@ class PlayersManagement extends Component {
         // Soft delete: set is_retired = true
         const { error } = await supabase
           .from('players')
-          .update({ is_retired: true })
+          .update({ is_retired: true, retired_at: new Date().toISOString() })
           .eq('id', player.playerId);
 
         if (error) {
@@ -320,6 +320,28 @@ class PlayersManagement extends Component {
     }
   };
 
+  handleUnretire = async (player) => {
+    this.setState({ actionLoading: player.id });
+    try {
+      if (player.playerId) {
+        const { error } = await supabase
+          .from('players')
+          .update({ is_retired: false, retired_at: null })
+          .eq('id', player.playerId);
+        if (error) console.error('Error unretiring player:', error);
+      }
+      this.setState((prevState) => ({
+        players: prevState.players.map((p) =>
+          p.id === player.id ? { ...p, status: 'active' } : p
+        ),
+        actionLoading: null,
+      }), this.filterPlayers);
+    } catch (error) {
+      console.error('Error unretiring player:', error);
+      this.setState({ actionLoading: null });
+    }
+  };
+
   getStatusBadge = (status) => {
     const styles = {
       active: 'bg-green-400/20 text-green-400',
@@ -328,7 +350,7 @@ class PlayersManagement extends Component {
     };
     return (
       <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || 'bg-white/10 text-white/50'}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {status === 'inactive' ? 'Retired' : status.charAt(0).toUpperCase() + status.slice(1)}
       </span>
     );
   };
@@ -472,7 +494,7 @@ class PlayersManagement extends Component {
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="pending">Pending</option>
-                <option value="inactive">Inactive</option>
+                <option value="inactive">Retired</option>
               </select>
             </div>
           </div>
@@ -579,10 +601,22 @@ class PlayersManagement extends Component {
                           <button
                             onClick={() => this.openModal('delete', player)}
                             className="p-2 rounded-lg bg-red-400/20 text-red-400 hover:bg-red-400/30 transition-colors"
-                            title="Deactivate"
+                            title="Retire"
                           >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        )}
+                        {player.status === 'inactive' && (
+                          <button
+                            onClick={() => this.handleUnretire(player)}
+                            disabled={actionLoading === player.id}
+                            className="p-2 rounded-lg bg-green-400/20 text-green-400 hover:bg-green-400/30 transition-colors"
+                            title="Unretire"
+                          >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
                             </svg>
                           </button>
                         )}
@@ -627,10 +661,10 @@ class PlayersManagement extends Component {
                     </svg>
                   </div>
                   <h3 className="text-xl font-display font-bold text-white text-center mb-2">
-                    Deactivate Player
+                    Retire Player
                   </h3>
                   <p className="text-white/60 text-center mb-6">
-                    Are you sure you want to deactivate <span className="text-white font-semibold">{selectedPlayer?.name}</span>? They will be marked as inactive.
+                    Are you sure you want to retire <span className="text-white font-semibold">{selectedPlayer?.name}</span>? They will be marked as Retired.
                   </p>
                   <div className="flex gap-3">
                     <button
@@ -644,7 +678,7 @@ class PlayersManagement extends Component {
                       disabled={actionLoading === selectedPlayer?.id}
                       className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
                     >
-                      {actionLoading === selectedPlayer?.id ? 'Deactivating...' : 'Deactivate'}
+                      {actionLoading === selectedPlayer?.id ? 'Retiring...' : 'Retire'}
                     </button>
                   </div>
                 </>
@@ -718,7 +752,7 @@ class PlayersManagement extends Component {
                       >
                         <option value="active">Active</option>
                         <option value="pending">Pending</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="inactive">Retired</option>
                       </select>
                     </div>
                   </div>

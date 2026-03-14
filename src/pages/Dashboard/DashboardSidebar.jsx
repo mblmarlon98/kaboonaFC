@@ -8,6 +8,13 @@ import { motion, AnimatePresence } from 'framer-motion';
  * Replaces AdminSidebar with unified role-based nav for all staff.
  */
 class DashboardSidebar extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      expandedGroups: {},
+    };
+  }
+
   /**
    * Check if the user has any of the specified roles.
    * super_admin inherits all admin access.
@@ -44,6 +51,30 @@ class DashboardSidebar extends Component {
             icon: (
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
+        ],
+      },
+      {
+        label: 'People',
+        roles: ['admin', 'super_admin', 'owner', 'manager'],
+        items: [
+          {
+            path: '/dashboard/staff',
+            label: 'Staff Management',
+            icon: (
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+              </svg>
+            ),
+          },
+          {
+            path: '/dashboard/players',
+            label: 'Players Management',
+            icon: (
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             ),
           },
@@ -181,24 +212,6 @@ class DashboardSidebar extends Component {
         roles: ['admin', 'super_admin'],
         items: [
           {
-            path: '/dashboard/players',
-            label: 'Players Management',
-            icon: (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            ),
-          },
-          {
-            path: '/dashboard/staff',
-            label: 'Staff Management',
-            icon: (
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            ),
-          },
-          {
             path: '/dashboard/analytics',
             label: 'Analytics',
             icon: (
@@ -306,6 +319,34 @@ class DashboardSidebar extends Component {
       if (!group.roles) return true;
       return this.userHasAnyRole(group.roles);
     });
+  };
+
+  isGroupActive = (group) => {
+    const currentPath = window.location.pathname;
+    return group.items.some(item => {
+      if (item.exact) return currentPath === item.path;
+      return currentPath.startsWith(item.path);
+    });
+  };
+
+  toggleGroup = (label) => {
+    this.setState(prev => ({
+      expandedGroups: {
+        ...prev.expandedGroups,
+        [label]: !prev.expandedGroups[label],
+      },
+    }));
+  };
+
+  isGroupExpanded = (group) => {
+    // Overview is always expanded
+    if (group.label === 'Overview') return true;
+    // If user has explicitly toggled, use that
+    if (this.state.expandedGroups[group.label] !== undefined) {
+      return this.state.expandedGroups[group.label];
+    }
+    // Auto-expand if group contains active route
+    return this.isGroupActive(group);
   };
 
   handleNavClick = () => {
@@ -427,31 +468,58 @@ class DashboardSidebar extends Component {
 
         {/* Navigation */}
         <nav className="flex-1 py-4 overflow-y-auto">
-          {filteredGroups.map((group) => (
-            <div key={group.label} className="mb-4">
-              {/* Group Label */}
-              {isExpanded && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="px-6 mb-2"
-                >
-                  <span className="text-white/40 text-xs font-semibold uppercase tracking-wider">
-                    {group.label}
-                  </span>
-                </motion.div>
-              )}
-              {!isExpanded && (
-                <div className="px-3 mb-2">
-                  <div className="border-t border-white/10" />
-                </div>
-              )}
-              <ul className="space-y-0.5 px-3">
-                {group.items.map((item) => this.renderNavItem(item))}
-              </ul>
-            </div>
-          ))}
+          {filteredGroups.map((group) => {
+            const isOverview = group.label === 'Overview';
+            const groupExpanded = this.isGroupExpanded(group);
+
+            return (
+              <div key={group.label} className="mb-4">
+                {/* Group Label */}
+                {isExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="px-6 mb-2"
+                  >
+                    {isOverview ? (
+                      <span className="text-white/40 text-xs font-semibold uppercase tracking-wider">
+                        {group.label}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => this.toggleGroup(group.label)}
+                        className="flex items-center justify-between w-full text-white/40 hover:text-white/60 transition-colors"
+                      >
+                        <span className="text-xs font-semibold uppercase tracking-wider">
+                          {group.label}
+                        </span>
+                        <svg
+                          className={`w-3.5 h-3.5 transition-transform duration-200 ${groupExpanded ? 'rotate-180' : ''}`}
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+                {!isExpanded && (
+                  <div className="px-3 mb-2">
+                    <div className="border-t border-white/10" />
+                  </div>
+                )}
+                {/* Items - always show when collapsed (icon-only) or when group is expanded */}
+                {(!isExpanded || isOverview || groupExpanded) && (
+                  <ul className="space-y-0.5 px-3">
+                    {group.items.map((item) => this.renderNavItem(item))}
+                  </ul>
+                )}
+              </div>
+            );
+          })}
         </nav>
 
         {/* Bottom Section */}
@@ -523,7 +591,7 @@ class DashboardSidebar extends Component {
           initial={false}
           animate={{ width: collapsed ? 80 : 256 }}
           transition={{ duration: 0.3 }}
-          className="fixed left-0 top-0 h-screen bg-surface-dark-elevated border-r border-white/10 z-50 flex-col hidden md:flex"
+          className="fixed left-0 top-16 md:top-20 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)] bg-surface-dark-elevated border-r border-white/10 z-40 flex-col hidden md:flex"
         >
           {this.renderSidebarContent()}
         </motion.aside>
@@ -546,7 +614,7 @@ class DashboardSidebar extends Component {
                 animate={{ x: 0 }}
                 exit={{ x: -256 }}
                 transition={{ duration: 0.3, ease: 'easeInOut' }}
-                className="fixed left-0 top-0 h-screen w-64 bg-surface-dark-elevated border-r border-white/10 z-[60] flex flex-col md:hidden"
+                className="fixed left-0 top-16 h-[calc(100vh-4rem)] w-64 bg-surface-dark-elevated border-r border-white/10 z-[60] flex flex-col md:hidden"
               >
                 {this.renderSidebarContent()}
               </motion.aside>

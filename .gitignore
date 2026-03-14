@@ -1,6 +1,11 @@
 node_modules
 dist
+.env
 .env.local
 .env*.local
+supabase/.env
 *.log
+*.png
 .DS_Store
+test.txt
+.playwright-mcp

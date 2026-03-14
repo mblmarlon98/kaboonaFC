@@ -555,6 +555,7 @@ class DashboardOverview extends Component {
             'bg-accent-gold/20',
             0
           )}
+          {/* Active Subscriptions stat card - commented out
           {this.renderStatCard(
             'Active Subscriptions',
             stats.activeSubscriptions,
@@ -565,6 +566,7 @@ class DashboardOverview extends Component {
             'bg-green-400/20',
             1
           )}
+          */}
           {this.renderStatCard(
             'Revenue This Month',
             this.formatCurrency(stats.revenueThisMonth),
@@ -588,7 +590,7 @@ class DashboardOverview extends Component {
         </div>
 
         {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
           {/* Traffic Chart */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -649,7 +651,7 @@ class DashboardOverview extends Component {
             </div>
           </motion.div>
 
-          {/* Subscription Growth */}
+          {/* Subscription Growth - commented out
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -685,6 +687,7 @@ class DashboardOverview extends Component {
               )}
             </div>
           </motion.div>
+          */}
         </div>
 
         {/* Revenue Breakdown and Recent Activity */}

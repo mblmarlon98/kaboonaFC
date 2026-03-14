@@ -16,8 +16,8 @@ class Footer extends Component {
         { to: '/shop', label: 'Shop' },
       ],
       join: [
-        { to: '/training-signup', label: 'Join Training' },
         { to: '/register', label: 'Create Account' },
+        { to: '/login', label: 'Sign In' },
       ],
       legal: [
         { to: '/terms', label: 'Terms' },

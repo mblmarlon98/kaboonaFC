@@ -155,14 +155,14 @@ class LeagueTable extends Component {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.3, delay: index * 0.05 }}
-                  className={`relative border-b border-white/5 transition-all duration-300 ${
+                  className={`border-b border-white/5 transition-all duration-300 ${
                     team.isKaboona
                       ? 'bg-accent-gold/10 hover:bg-accent-gold/20'
                       : 'hover:bg-white/5'
                   }`}
                 >
-                  {this.renderPositionBadge(team.position)}
-                  <td className={`py-4 px-4 font-bold ${team.isKaboona ? 'text-accent-gold' : 'text-white'}`}>
+                  <td className={`py-4 px-4 font-bold relative ${team.isKaboona ? 'text-accent-gold' : 'text-white'}`}>
+                    {this.renderPositionBadge(team.position)}
                     {team.position}
                   </td>
                   <td className={`py-4 px-4 font-medium ${team.isKaboona ? 'text-accent-gold' : 'text-white/90'}`}>

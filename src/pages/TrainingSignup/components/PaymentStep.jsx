@@ -332,7 +332,7 @@ class PaymentStep extends Component {
             <a href="/privacy" className="text-accent-gold hover:text-accent-gold-light">
               Privacy Policy
             </a>
-            . I understand that my subscription will automatically renew and I can cancel anytime.
+.
           </label>
         </div>
         {errors.acceptTerms && (

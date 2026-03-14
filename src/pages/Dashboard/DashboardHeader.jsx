@@ -1,7 +1,10 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { markRead, markAllRead } from '../../redux/slices/notificationSlice';
+import { signOut } from '../../services/auth';
+import { logout } from '../../redux/slices/authSlice';
 
 /**
  * Dashboard Header
@@ -38,6 +41,12 @@ class DashboardHeader extends Component {
     this.setState((prevState) => ({
       showNotifications: !prevState.showNotifications,
     }));
+  };
+
+  handleLogout = async () => {
+    await signOut();
+    this.props.logout();
+    window.location.href = '/';
   };
 
   getRoleTitle = () => {
@@ -124,7 +133,7 @@ class DashboardHeader extends Component {
     return (
       <header className="sticky top-0 z-40 bg-surface-dark-elevated border-b border-white/10">
         <div className="flex items-center justify-between px-4 md:px-6 py-4">
-          {/* Left side - Hamburger and Title */}
+          {/* Left side - Hamburger, Logo, and Title */}
           <div className="flex items-center gap-4">
             <button
               onClick={onToggleSidebar}
@@ -144,6 +153,13 @@ class DashboardHeader extends Component {
                 />
               </svg>
             </button>
+            <Link to="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+              <img
+                src={`${import.meta.env.BASE_URL}kaboona-logo.png`}
+                alt="Kaboona FC"
+                className="h-8 w-auto"
+              />
+            </Link>
             <h1 className="text-xl font-display font-bold text-white">
               {roleTitle}
             </h1>
@@ -258,25 +274,36 @@ class DashboardHeader extends Component {
 
             {/* User Info */}
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
-              <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-accent-gold/20">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={userName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="font-bold text-accent-gold">
-                    {userName.charAt(0).toUpperCase()}
+              <Link to="/profile" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+                <div className="w-10 h-10 rounded-full flex items-center justify-center overflow-hidden bg-accent-gold/20">
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={userName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="font-bold text-accent-gold">
+                      {userName.charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
+                <div className="hidden sm:block">
+                  <p className="text-white font-medium text-sm">{userName}</p>
+                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${roleBadgeColor}`}>
+                    {roleLabel}
                   </span>
-                )}
-              </div>
-              <div className="hidden sm:block">
-                <p className="text-white font-medium text-sm">{userName}</p>
-                <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${roleBadgeColor}`}>
-                  {roleLabel}
-                </span>
-              </div>
+                </div>
+              </Link>
+              <button
+                onClick={this.handleLogout}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white"
+                title="Logout"
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -293,6 +320,7 @@ const mapStateToProps = (state) => ({
 const mapDispatchToProps = {
   markRead,
   markAllRead,
+  logout,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(DashboardHeader);
