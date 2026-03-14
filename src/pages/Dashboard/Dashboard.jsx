@@ -8,6 +8,7 @@ import { getCurrentUser } from '../../services/auth';
 import { setUser } from '../../redux/slices/authSlice';
 
 // Real components
+import DashboardHome from './DashboardHome';
 import DashboardOverview from './components/DashboardOverview';
 import TrainingScheduler from './components/TrainingScheduler';
 import MatchScheduler from './components/MatchScheduler';
@@ -22,6 +23,7 @@ import StaffPlayerManagement from './components/StaffPlayerManagement';
 import UserAnalytics from './components/UserAnalytics';
 import UserManagement from './components/UserManagement';
 import SuperAdminOverview from './components/SuperAdminOverview';
+import Calendar from './components/Calendar';
 
 /**
  * Placeholder page component for routes not yet wired to real components.
@@ -233,8 +235,8 @@ class Dashboard extends Component {
           <main className="p-4 md:p-6">
             <Routes>
               {/* Overview */}
-              <Route index element={<DashboardOverview />} />
-              <Route path="calendar" element={<PlaceholderPage title="Calendar" />} />
+              <Route index element={<DashboardHome />} />
+              <Route path="calendar" element={<Calendar userRoles={user?.roles} user={user} />} />
 
               {/* Coaching */}
               <Route path="training" element={<TrainingScheduler />} />
