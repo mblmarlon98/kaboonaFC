@@ -24,6 +24,10 @@ import UserAnalytics from './components/UserAnalytics';
 import UserManagement from './components/UserManagement';
 import SuperAdminOverview from './components/SuperAdminOverview';
 import Calendar from './components/Calendar';
+import EventsManagement from './components/EventsManagement';
+import PlayerAttendance from './components/PlayerAttendance';
+import PlayerNotes from './components/PlayerNotes';
+import ActivityLog from './components/ActivityLog';
 
 /**
  * Placeholder page component for routes not yet wired to real components.
@@ -244,12 +248,12 @@ class Dashboard extends Component {
               <Route path="formation" element={<FormationBuilder />} />
               <Route path="squad" element={<SquadSelection />} />
               <Route path="match-evaluation" element={<MatchEvaluation />} />
-              <Route path="attendance" element={<PlaceholderPage title="Player Attendance" />} />
-              <Route path="player-notes" element={<PlaceholderPage title="Player Notes" />} />
+              <Route path="attendance" element={<PlayerAttendance />} />
+              <Route path="player-notes" element={<PlayerNotes />} />
 
               {/* Marketing & Content */}
               <Route path="content" element={<ContentManagement />} />
-              <Route path="events" element={<PlaceholderPage title="Events Management" />} />
+              <Route path="events" element={<EventsManagement />} />
 
               {/* Finance */}
               <Route path="payments" element={<PaymentsOverview />} />
@@ -259,7 +263,7 @@ class Dashboard extends Component {
               <Route path="players" element={<PlayersManagement />} />
               <Route path="staff" element={<StaffPlayerManagement user={user} isSuperAdmin={superAdmin} />} />
               <Route path="analytics" element={<UserAnalytics />} />
-              <Route path="activity-log" element={<PlaceholderPage title="Activity Log" />} />
+              <Route path="activity-log" element={<ActivityLog />} />
 
               {/* Super Admin Only */}
               {superAdmin && (
