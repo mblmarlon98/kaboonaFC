@@ -7,6 +7,22 @@ import DashboardHeader from './DashboardHeader';
 import { getCurrentUser } from '../../services/auth';
 import { setUser } from '../../redux/slices/authSlice';
 
+// Real components
+import DashboardOverview from './components/DashboardOverview';
+import TrainingScheduler from './components/TrainingScheduler';
+import MatchScheduler from './components/MatchScheduler';
+import FormationBuilder from './components/FormationBuilder';
+import SquadSelection from './components/SquadSelection';
+import MatchEvaluation from './components/MatchEvaluation';
+import ContentManagement from './components/ContentManagement';
+import PaymentsOverview from './components/PaymentsOverview';
+import InvestorsManagement from './components/InvestorsManagement';
+import PlayersManagement from './components/PlayersManagement';
+import StaffPlayerManagement from './components/StaffPlayerManagement';
+import UserAnalytics from './components/UserAnalytics';
+import UserManagement from './components/UserManagement';
+import SuperAdminOverview from './components/SuperAdminOverview';
+
 /**
  * Placeholder page component for routes not yet wired to real components.
  */
@@ -217,38 +233,38 @@ class Dashboard extends Component {
           <main className="p-4 md:p-6">
             <Routes>
               {/* Overview */}
-              <Route index element={<PlaceholderPage title="Dashboard Home" />} />
+              <Route index element={<DashboardOverview />} />
               <Route path="calendar" element={<PlaceholderPage title="Calendar" />} />
 
               {/* Coaching */}
-              <Route path="training" element={<PlaceholderPage title="Training" />} />
-              <Route path="matches" element={<PlaceholderPage title="Matches" />} />
-              <Route path="formation" element={<PlaceholderPage title="Formation Builder" />} />
-              <Route path="squad" element={<PlaceholderPage title="Squad Selection" />} />
-              <Route path="match-evaluation" element={<PlaceholderPage title="Match Evaluation" />} />
+              <Route path="training" element={<TrainingScheduler />} />
+              <Route path="matches" element={<MatchScheduler />} />
+              <Route path="formation" element={<FormationBuilder />} />
+              <Route path="squad" element={<SquadSelection />} />
+              <Route path="match-evaluation" element={<MatchEvaluation />} />
               <Route path="attendance" element={<PlaceholderPage title="Player Attendance" />} />
               <Route path="player-notes" element={<PlaceholderPage title="Player Notes" />} />
 
               {/* Marketing & Content */}
-              <Route path="content" element={<PlaceholderPage title="Content Management" />} />
+              <Route path="content" element={<ContentManagement />} />
               <Route path="events" element={<PlaceholderPage title="Events Management" />} />
 
               {/* Finance */}
-              <Route path="payments" element={<PlaceholderPage title="Payments" />} />
-              <Route path="investors" element={<PlaceholderPage title="Investors Management" />} />
+              <Route path="payments" element={<PaymentsOverview />} />
+              <Route path="investors" element={<InvestorsManagement />} />
 
               {/* System */}
-              <Route path="players" element={<PlaceholderPage title="Players Management" />} />
-              <Route path="staff" element={<PlaceholderPage title="Staff Management" />} />
-              <Route path="analytics" element={<PlaceholderPage title="Analytics" />} />
+              <Route path="players" element={<PlayersManagement />} />
+              <Route path="staff" element={<StaffPlayerManagement user={user} isSuperAdmin={superAdmin} />} />
+              <Route path="analytics" element={<UserAnalytics />} />
               <Route path="activity-log" element={<PlaceholderPage title="Activity Log" />} />
 
               {/* Super Admin Only */}
               {superAdmin && (
-                <Route path="users" element={<PlaceholderPage title="User Management" />} />
+                <Route path="users" element={<UserManagement />} />
               )}
               {superAdmin && (
-                <Route path="super" element={<PlaceholderPage title="Super Admin Overview" />} />
+                <Route path="super" element={<SuperAdminOverview />} />
               )}
 
               {/* Catch-all */}

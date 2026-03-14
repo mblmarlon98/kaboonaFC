@@ -102,6 +102,7 @@ class PlayersManagement extends Component {
           name: player?.name || profile.full_name || 'Unknown',
           email: player?.email || '',
           position: player?.position || '-',
+          number: player?.number || '',
           status,
           joinDate: profile.created_at,
           profileRole: profile.role,
@@ -167,11 +168,83 @@ class PlayersManagement extends Component {
   };
 
   openModal = (type, player = null) => {
-    this.setState({ showModal: true, modalType: type, selectedPlayer: player });
+    this.setState({
+      showModal: true,
+      modalType: type,
+      selectedPlayer: player,
+      editForm: player ? {
+        name: player.name || '',
+        email: player.email || '',
+        position: player.position || '-',
+        status: player.status || 'active',
+        number: player.number || '',
+      } : {},
+    });
+  };
+
+  handleEditFormChange = (e) => {
+    const { name, value } = e.target;
+    this.setState((prev) => ({
+      editForm: { ...prev.editForm, [name]: value },
+    }));
   };
 
   closeModal = () => {
     this.setState({ showModal: false, modalType: null, selectedPlayer: null });
+  };
+
+  handleSaveEdit = async () => {
+    const { selectedPlayer, editForm } = this.state;
+    if (!selectedPlayer) return;
+
+    this.setState({ actionLoading: selectedPlayer.id });
+
+    try {
+      // Update player record if it exists
+      if (selectedPlayer.playerId) {
+        const playerUpdate = { name: editForm.name, position: editForm.position };
+        if (editForm.email) playerUpdate.email = editForm.email;
+        if (editForm.number) playerUpdate.number = parseInt(editForm.number, 10);
+
+        const { error: playerError } = await supabase
+          .from('players')
+          .update(playerUpdate)
+          .eq('id', selectedPlayer.playerId);
+
+        if (playerError) console.error('Error updating player:', playerError);
+      }
+
+      // Update profile name
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: editForm.name })
+        .eq('id', selectedPlayer.id);
+
+      if (profileError) console.error('Error updating profile:', profileError);
+
+      // Handle status changes
+      if (editForm.status === 'inactive' && selectedPlayer.playerId) {
+        await supabase.from('players').update({ is_retired: true }).eq('id', selectedPlayer.playerId);
+      } else if (editForm.status === 'active' && selectedPlayer.playerId) {
+        await supabase.from('players').update({ is_retired: false }).eq('id', selectedPlayer.playerId);
+      }
+
+      // Update local state
+      this.setState((prevState) => ({
+        players: prevState.players.map((p) =>
+          p.id === selectedPlayer.id
+            ? { ...p, name: editForm.name, email: editForm.email, position: editForm.position, status: editForm.status, number: editForm.number }
+            : p
+        ),
+        actionLoading: null,
+      }), () => {
+        this.filterPlayers();
+        this.closeModal();
+      });
+    } catch (error) {
+      console.error('Error saving player edit:', error);
+      this.setState({ actionLoading: null });
+    }
   };
 
   handleApprove = async (player) => {
@@ -587,7 +660,9 @@ class PlayersManagement extends Component {
                       <label className="block text-white/60 text-sm mb-1">Name</label>
                       <input
                         type="text"
-                        defaultValue={selectedPlayer?.name}
+                        name="name"
+                        value={this.state.editForm?.name || ''}
+                        onChange={this.handleEditFormChange}
                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold"
                       />
                     </div>
@@ -595,16 +670,32 @@ class PlayersManagement extends Component {
                       <label className="block text-white/60 text-sm mb-1">Email</label>
                       <input
                         type="email"
-                        defaultValue={selectedPlayer?.email}
+                        name="email"
+                        value={this.state.editForm?.email || ''}
+                        onChange={this.handleEditFormChange}
                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-white/60 text-sm mb-1">Jersey Number</label>
+                      <input
+                        type="number"
+                        name="number"
+                        value={this.state.editForm?.number || ''}
+                        onChange={this.handleEditFormChange}
+                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold"
+                        placeholder="e.g. 10"
                       />
                     </div>
                     <div>
                       <label className="block text-white/60 text-sm mb-1">Position</label>
                       <select
-                        defaultValue={selectedPlayer?.position}
+                        name="position"
+                        value={this.state.editForm?.position || ''}
+                        onChange={this.handleEditFormChange}
                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold"
                       >
+                        <option value="Unassigned">Unassigned</option>
                         <option value="GK">GK - Goalkeeper</option>
                         <option value="CB">CB - Center Back</option>
                         <option value="LB">LB - Left Back</option>
@@ -620,7 +711,9 @@ class PlayersManagement extends Component {
                     <div>
                       <label className="block text-white/60 text-sm mb-1">Status</label>
                       <select
-                        defaultValue={selectedPlayer?.status}
+                        name="status"
+                        value={this.state.editForm?.status || ''}
+                        onChange={this.handleEditFormChange}
                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold"
                       >
                         <option value="active">Active</option>
@@ -637,10 +730,11 @@ class PlayersManagement extends Component {
                       Cancel
                     </button>
                     <button
-                      onClick={this.closeModal}
-                      className="flex-1 px-4 py-2 bg-accent-gold text-black font-bold rounded-lg hover:bg-accent-gold-light transition-colors"
+                      onClick={this.handleSaveEdit}
+                      disabled={actionLoading === selectedPlayer?.id}
+                      className="flex-1 px-4 py-2 bg-accent-gold text-black font-bold rounded-lg hover:bg-accent-gold-light transition-colors disabled:opacity-50"
                     >
-                      Save Changes
+                      {actionLoading === selectedPlayer?.id ? 'Saving...' : 'Save Changes'}
                     </button>
                   </div>
                 </>
