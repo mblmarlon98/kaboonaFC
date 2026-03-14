@@ -35,13 +35,15 @@ class CalendarEventModal extends Component {
       // Create mode defaults
       const now = new Date();
       const defaultDate = new Date(now.getTime() + 3600000);
+      const defaultDateStr = defaultDate.toISOString().split('T')[0];
+      const defaultTimeStr = `${String(defaultDate.getHours()).padStart(2, '0')}:${String(defaultDate.getMinutes()).padStart(2, '0')}`;
       const dateStr = this.toDateTimeLocal(defaultDate);
 
       if (eventType === 'training') {
-        return { title: '', date: dateStr, location: '', notes: '' };
+        return { session_date: defaultDateStr, session_time: defaultTimeStr, location: '' };
       }
       if (eventType === 'match') {
-        return { opponent: '', date: dateStr, venue: '', type: 'friendly', notes: '' };
+        return { opponent: '', match_date: defaultDateStr, match_time: defaultTimeStr, location: '' };
       }
       if (eventType === 'event') {
         return { title: '', description: '', date: dateStr, end_date: '', location: '', type: 'fan_event', is_public: true };
@@ -53,19 +55,17 @@ class CalendarEventModal extends Component {
     const type = event.eventType || eventType;
     if (type === 'training') {
       return {
-        title: event.title || '',
-        date: this.toDateTimeLocal(event.date),
+        session_date: event.session_date || '',
+        session_time: event.session_time || '',
         location: event.location || '',
-        notes: event.notes || '',
       };
     }
     if (type === 'match') {
       return {
         opponent: event.opponent || '',
-        date: this.toDateTimeLocal(event.date),
-        venue: event.venue || '',
-        type: event.type || 'friendly',
-        notes: event.notes || '',
+        match_date: event.match_date || '',
+        match_time: event.match_time || '',
+        location: event.location || '',
       };
     }
     if (type === 'event') {
@@ -99,7 +99,7 @@ class CalendarEventModal extends Component {
   getTableName = () => {
     const { event, eventType } = this.props;
     const type = event?.eventType || eventType;
-    if (type === 'training') return 'trainings';
+    if (type === 'training') return 'training_sessions';
     if (type === 'match') return 'matches';
     if (type === 'event') return 'events';
     return null;
@@ -115,14 +115,20 @@ class CalendarEventModal extends Component {
     this.setState({ saving: true, error: null });
 
     try {
+      const { event: existingEvent, eventType } = this.props;
+      const type = existingEvent?.eventType || eventType;
+
       // Build the data payload
       const data = { ...form };
 
-      // Convert date strings to ISO
-      if (data.date) data.date = new Date(data.date).toISOString();
-      if (data.end_date) {
-        data.end_date = data.end_date ? new Date(data.end_date).toISOString() : null;
+      // For events table, convert datetime-local strings to ISO
+      if (type === 'event') {
+        if (data.date) data.date = new Date(data.date).toISOString();
+        if (data.end_date) {
+          data.end_date = data.end_date ? new Date(data.end_date).toISOString() : null;
+        }
       }
+      // For training_sessions and matches, session_date/match_date/session_time/match_time are already plain strings
 
       if (event && event.id) {
         // Update existing
@@ -203,7 +209,7 @@ class CalendarEventModal extends Component {
 
         {/* Title */}
         <h2 className="text-xl font-display font-bold text-white">
-          {type === 'match' ? `vs ${event.opponent || 'TBD'}` : event.title || 'Untitled'}
+          {type === 'match' ? `vs ${event.opponent || 'TBD'}` : type === 'training' ? 'Training Session' : event.title || 'Untitled'}
         </h2>
 
         {/* Details */}
@@ -212,8 +218,17 @@ class CalendarEventModal extends Component {
             <svg className="w-5 h-5 text-white/40 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span>{this.formatViewDate(event.date)}</span>
+            <span>{this.formatViewDate(event.session_date || event.match_date || event.date)}</span>
           </div>
+
+          {(event.session_time || event.match_time) && (
+            <div className="flex items-center gap-3 text-white/70">
+              <svg className="w-5 h-5 text-white/40 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{event.session_time || event.match_time}</span>
+            </div>
+          )}
 
           {event.end_date && (
             <div className="flex items-center gap-3 text-white/70">
@@ -224,13 +239,13 @@ class CalendarEventModal extends Component {
             </div>
           )}
 
-          {(event.location || event.venue) && (
+          {event.location && (
             <div className="flex items-center gap-3 text-white/70">
               <svg className="w-5 h-5 text-white/40 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-              <span>{event.location || event.venue}</span>
+              <span>{event.location}</span>
             </div>
           )}
 
@@ -391,24 +406,18 @@ class CalendarEventModal extends Component {
         <div className="space-y-4">
           {type === 'training' && (
             <>
-              {this.renderFormField('Title', 'title', 'text')}
-              {this.renderFormField('Date & Time', 'date', 'datetime-local')}
+              {this.renderFormField('Date', 'session_date', 'date')}
+              {this.renderFormField('Time', 'session_time', 'time')}
               {this.renderFormField('Location', 'location', 'text')}
-              {this.renderFormField('Notes', 'notes', 'textarea')}
             </>
           )}
 
           {type === 'match' && (
             <>
               {this.renderFormField('Opponent', 'opponent', 'text')}
-              {this.renderFormField('Date & Time', 'date', 'datetime-local')}
-              {this.renderFormField('Venue', 'venue', 'text')}
-              {this.renderFormField('Match Type', 'type', 'select', [
-                { value: 'friendly', label: 'Friendly' },
-                { value: 'league', label: 'League' },
-                { value: 'cup', label: 'Cup' },
-              ])}
-              {this.renderFormField('Notes', 'notes', 'textarea')}
+              {this.renderFormField('Date', 'match_date', 'date')}
+              {this.renderFormField('Time', 'match_time', 'time')}
+              {this.renderFormField('Location', 'location', 'text')}
             </>
           )}
 

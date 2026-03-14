@@ -95,17 +95,17 @@ class DashboardHome extends Component {
     if (isCoach) {
       // Next Training
       const { data: trainings } = await supabase
-        .from('trainings')
+        .from('training_sessions')
         .select('*')
-        .gte('date', new Date().toISOString())
-        .order('date')
+        .gte('session_date', new Date().toISOString().split('T')[0])
+        .order('session_date')
         .limit(1);
 
       const nextTraining = trainings && trainings.length > 0 ? trainings[0] : null;
       stats.push({
         title: 'Next Training',
         value: nextTraining
-          ? new Date(nextTraining.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+          ? new Date(nextTraining.session_date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
           : 'None scheduled',
         icon: (
           <svg className="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -119,15 +119,15 @@ class DashboardHome extends Component {
       const { data: matches } = await supabase
         .from('matches')
         .select('*')
-        .gte('date', new Date().toISOString())
-        .order('date')
+        .gte('match_date', new Date().toISOString().split('T')[0])
+        .order('match_date')
         .limit(1);
 
       const nextMatch = matches && matches.length > 0 ? matches[0] : null;
       stats.push({
         title: 'Next Match',
         value: nextMatch
-          ? `${nextMatch.opponent || 'TBD'} - ${new Date(nextMatch.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+          ? `${nextMatch.opponent || 'TBD'} - ${new Date(nextMatch.match_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
           : 'None scheduled',
         icon: (
           <svg className="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -248,23 +248,24 @@ class DashboardHome extends Component {
 
   fetchUpcomingEvents = async () => {
     const now = new Date().toISOString();
+    const todayDate = new Date().toISOString().split('T')[0];
     const events = [];
 
     try {
       // Fetch upcoming trainings
       const { data: trainings } = await supabase
-        .from('trainings')
-        .select('id, title, date, location')
-        .gte('date', now)
-        .order('date')
+        .from('training_sessions')
+        .select('id, session_date, session_time, location')
+        .gte('session_date', todayDate)
+        .order('session_date')
         .limit(5);
 
       (trainings || []).forEach((t) => {
         events.push({
           id: `training-${t.id}`,
           type: 'training',
-          title: t.title || 'Training Session',
-          date: t.date,
+          title: 'Training Session',
+          date: t.session_date,
           location: t.location,
         });
       });
@@ -272,9 +273,9 @@ class DashboardHome extends Component {
       // Fetch upcoming matches
       const { data: matches } = await supabase
         .from('matches')
-        .select('id, opponent, date, venue')
-        .gte('date', now)
-        .order('date')
+        .select('id, opponent, match_date, match_time, location')
+        .gte('match_date', todayDate)
+        .order('match_date')
         .limit(5);
 
       (matches || []).forEach((m) => {
@@ -282,8 +283,8 @@ class DashboardHome extends Component {
           id: `match-${m.id}`,
           type: 'match',
           title: `vs ${m.opponent || 'TBD'}`,
-          date: m.date,
-          location: m.venue,
+          date: m.match_date,
+          location: m.location,
         });
       });
 

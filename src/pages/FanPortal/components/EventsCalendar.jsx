@@ -44,19 +44,20 @@ class EventsCalendar extends Component {
     this.setState({ loading: true, error: null });
     try {
       const now = new Date().toISOString();
+      const todayDate = new Date().toISOString().split('T')[0];
 
       const [trainingsRes, matchesRes, eventsRes] = await Promise.all([
         supabase
-          .from('trainings')
-          .select('id, title, date, location')
-          .gte('date', now)
-          .order('date')
+          .from('training_sessions')
+          .select('id, session_date, session_time, location')
+          .gte('session_date', todayDate)
+          .order('session_date')
           .limit(20),
         supabase
           .from('matches')
-          .select('id, opponent, date, venue, type')
-          .gte('date', now)
-          .order('date')
+          .select('id, opponent, match_date, match_time, location')
+          .gte('match_date', todayDate)
+          .order('match_date')
           .limit(20),
         supabase
           .from('events')
@@ -73,8 +74,8 @@ class EventsCalendar extends Component {
         trainingsRes.data.forEach((t) => {
           normalized.push({
             id: `training-${t.id}`,
-            title: t.title || 'Training Session',
-            date: t.date,
+            title: 'Training Session',
+            date: t.session_date,
             location: t.location || null,
             eventType: 'training',
             details: null,
@@ -87,10 +88,10 @@ class EventsCalendar extends Component {
           normalized.push({
             id: `match-${m.id}`,
             title: `vs ${m.opponent}`,
-            date: m.date,
-            location: m.venue || null,
+            date: m.match_date,
+            location: m.location || null,
             eventType: 'match',
-            details: m.type ? `Match type: ${m.type}` : null,
+            details: null,
           });
         });
       }

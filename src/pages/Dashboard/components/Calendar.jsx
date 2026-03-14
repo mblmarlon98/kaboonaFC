@@ -78,8 +78,11 @@ class Calendar extends Component {
     const { userRoles, readOnly } = this.props;
     const { currentDate } = this.state;
 
-    const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
-    const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
+    const startOfMonthDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`;
+    const endOfMonthDay = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
+    const endOfMonthDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(endOfMonthDay).padStart(2, '0')}`;
+    const startOfMonthISO = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+    const endOfMonthISO = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0, 23, 59, 59, 999).toISOString();
 
     let trainings = [];
     let matches = [];
@@ -95,28 +98,28 @@ class Calendar extends Component {
     try {
       if (hasCoachRole) {
         const { data } = await supabase
-          .from('trainings')
+          .from('training_sessions')
           .select('*')
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth);
-        trainings = (data || []).map((t) => ({ ...t, eventType: 'training' }));
+          .gte('session_date', startOfMonthDate)
+          .lte('session_date', endOfMonthDate);
+        trainings = (data || []).map((t) => ({ ...t, date: t.session_date, eventType: 'training' }));
       }
 
       if (hasCoachRole || hasMarketingRole) {
         const { data } = await supabase
           .from('matches')
           .select('*')
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth);
-        matches = (data || []).map((m) => ({ ...m, eventType: 'match' }));
+          .gte('match_date', startOfMonthDate)
+          .lte('match_date', endOfMonthDate);
+        matches = (data || []).map((m) => ({ ...m, date: m.match_date, eventType: 'match' }));
       }
 
       if (hasMarketingRole) {
         let query = supabase
           .from('events')
           .select('*')
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth);
+          .gte('date', startOfMonthISO)
+          .lte('date', endOfMonthISO);
         if (readOnly) {
           query = query.eq('is_public', true);
         }
@@ -184,6 +187,7 @@ class Calendar extends Component {
    */
   getEventTitle = (event) => {
     if (event.eventType === 'match') return `vs ${event.opponent || 'TBD'}`;
+    if (event.eventType === 'training') return 'Training Session';
     return event.title || event.name || 'Untitled';
   };
 
@@ -544,8 +548,8 @@ class Calendar extends Component {
                   </span>
                 </div>
                 <p className="text-white font-medium truncate">{this.getEventTitle(event)}</p>
-                {(event.location || event.venue) && (
-                  <p className="text-white/40 text-sm truncate">{event.location || event.venue}</p>
+                {event.location && (
+                  <p className="text-white/40 text-sm truncate">{event.location}</p>
                 )}
               </div>
               <div className="text-right flex-shrink-0">

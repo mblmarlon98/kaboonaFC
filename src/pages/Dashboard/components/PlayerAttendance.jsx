@@ -39,13 +39,13 @@ class PlayerAttendance extends Component {
     try {
       const [trainingsRes, matchesRes] = await Promise.all([
         supabase
-          .from('trainings')
+          .from('training_sessions')
           .select('*, event_invitations(*, profiles(full_name, profile_image_url))')
-          .order('date', { ascending: false }),
+          .order('session_date', { ascending: false }),
         supabase
           .from('matches')
           .select('*, event_invitations(*, profiles(full_name, profile_image_url))')
-          .order('date', { ascending: false }),
+          .order('match_date', { ascending: false }),
       ]);
 
       if (trainingsRes.error) throw trainingsRes.error;
@@ -121,19 +121,19 @@ class PlayerAttendance extends Component {
       allEvents = [...trainingEvents, ...matchEvents];
     }
 
-    allEvents.sort((a, b) => new Date(b.date || b.session_date) - new Date(a.date || a.session_date));
+    allEvents.sort((a, b) => new Date(b.session_date || b.match_date) - new Date(a.session_date || a.match_date));
     return allEvents;
   };
 
   getEventDate = (event) => {
-    return event.date || event.session_date || '';
+    return event.session_date || event.match_date || '';
   };
 
   getEventTitle = (event) => {
     if (event._type === 'match') {
-      return event.title || `${event.home_team || 'Home'} vs ${event.away_team || 'Away'}`;
+      return `vs ${event.opponent || 'TBD'}`;
     }
-    return event.title || 'Training Session';
+    return 'Training Session';
   };
 
   isUpcoming = (event) => {
