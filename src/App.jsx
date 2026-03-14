@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { connect } from 'react-redux';
 import { Layout } from './components/Layout';
 import Home from './pages/Home';
@@ -8,15 +8,22 @@ import Stats from './pages/Stats';
 import Shop from './pages/Shop';
 import FanPortal from './pages/FanPortal';
 import Investors from './pages/Investors';
-import TrainingSignup from './pages/TrainingSignup';
-import { Login, Register, ForgotPassword } from './pages/Auth';
+import { Login, Register, ForgotPassword, ResetPassword } from './pages/Auth';
 import AuthCallback from './pages/Auth/AuthCallback';
 import { Profile, ProfileEdit } from './pages/Profile';
 import Admin from './pages/Admin';
+import Notifications from './pages/Notifications';
 import CoachingZone from './pages/CoachingZone/CoachingZone';
+import ContentZone from './pages/ContentZone/ContentZone';
+import MarketingZone from './pages/MarketingZone/MarketingZone';
 import PlayerProfile from './pages/PlayerProfile';
 import ProtectedRoute from './components/ProtectedRoute';
+import Dashboard from './pages/Dashboard/Dashboard';
 import PlayerModalProvider from './components/shared/PlayerModalContext';
+import Terms from './pages/Legal/Terms';
+import Privacy from './pages/Legal/Privacy';
+import Refund from './pages/Legal/Refund';
+import Cookies from './pages/Legal/Cookies';
 import { onAuthStateChange, getSession, getCurrentUser } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 import { setNotifications, addNotification, setUnreadCount } from './redux/slices/notificationSlice';
@@ -163,76 +170,89 @@ class App extends Component {
 
     return (
       <PlayerModalProvider>
-        <Layout
-          darkMode={darkMode}
-          toggleDarkMode={this.toggleDarkMode}
-          user={user}
-        >
-          <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Home />} />
-          <Route path="/our-team" element={<OurTeam />} />
-          <Route path="/player/:playerId" element={<PlayerProfile />} />
-          <Route path="/stats" element={<Stats />} />
-          <Route path="/shop" element={<Shop />} />
-          <Route path="/fan-portal" element={<FanPortal />} />
-          <Route path="/investors" element={<Investors />} />
-
-          {/* Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/auth/callback" element={<AuthCallback />} />
-          <Route path="/training-signup" element={<TrainingSignup />} />
-
-          {/* Protected Routes */}
+        <Routes>
+          {/* Dashboard — renders OUTSIDE Layout with its own sidebar/header */}
           <Route
-            path="/profile"
+            path="/dashboard/*"
             element={
               <ProtectedRoute>
-                <Profile />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/profile/edit"
-            element={
-              <ProtectedRoute>
-                <ProfileEdit />
+                <Dashboard />
               </ProtectedRoute>
             }
           />
 
-          {/* Admin Routes - Protected with role check inside Admin component */}
+          {/* Redirects from old zone URLs to new dashboard */}
+          <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/coaching-zone" element={<Navigate to="/dashboard/training" replace />} />
+          <Route path="/content-zone" element={<Navigate to="/dashboard/content" replace />} />
+          <Route path="/marketing-zone" element={<Navigate to="/dashboard/events" replace />} />
+
+          {/* Everything else inside Layout */}
           <Route
-            path="/admin/*"
+            path="/*"
             element={
-              <ProtectedRoute>
-                <Admin />
-              </ProtectedRoute>
+              <Layout
+                darkMode={darkMode}
+                toggleDarkMode={this.toggleDarkMode}
+                user={user}
+              >
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/our-team" element={<OurTeam />} />
+                  <Route path="/player/:playerId" element={<PlayerProfile />} />
+                  <Route path="/stats" element={<Stats />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/fan-portal" element={<FanPortal />} />
+                  <Route path="/investors" element={<Investors />} />
+
+                  {/* Auth Routes */}
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/auth/callback" element={<AuthCallback />} />
+
+                  {/* Protected Routes */}
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/notifications"
+                    element={
+                      <ProtectedRoute>
+                        <Notifications />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/profile/edit"
+                    element={
+                      <ProtectedRoute>
+                        <ProfileEdit />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  {/* Legal Routes */}
+                  <Route path="/terms" element={<Terms />} />
+                  <Route path="/privacy" element={<Privacy />} />
+                  <Route path="/refund" element={<Refund />} />
+                  <Route path="/cookies" element={<Cookies />} />
+
+                  {/* 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Layout>
             }
           />
-
-          {/* Coaching Zone - Protected with role check inside component */}
-          <Route
-            path="/coaching-zone"
-            element={
-              <ProtectedRoute>
-                <CoachingZone />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Legal Routes */}
-          <Route path="/terms" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Terms & Conditions</h1></div>} />
-          <Route path="/privacy" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Privacy Policy</h1></div>} />
-          <Route path="/refund" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Refund Policy</h1></div>} />
-          <Route path="/cookies" element={<div className="min-h-screen p-8"><h1 className="text-2xl font-display">Cookie Policy</h1></div>} />
-
-          {/* 404 */}
-          <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Layout>
+        </Routes>
       </PlayerModalProvider>
     );
   }
