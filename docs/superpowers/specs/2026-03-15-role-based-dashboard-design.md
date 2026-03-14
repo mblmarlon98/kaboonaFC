@@ -65,7 +65,7 @@ The dashboard sidebar includes a "Public Site" group at the bottom with links to
 | Player Attendance | `/dashboard/attendance` | PlayerAttendance |
 | Player Notes | `/dashboard/player-notes` | PlayerNotes |
 | Content Management | `/dashboard/content` | ContentManagement |
-| News Articles | `/dashboard/news` | NewsManagement (section within ContentManagement) |
+| News Articles | `/dashboard/content` | ContentManagement (News tab is pre-selected via sidebar click) |
 | Events | `/dashboard/events` | EventsManagement |
 | Payments | `/dashboard/payments` | PaymentsOverview |
 | Investors Management | `/dashboard/investors` | InvestorsManagement |
@@ -102,7 +102,10 @@ Same as current Admin page:
 - **On mobile (< md):** sidebar is hidden by default, toggled via hamburger icon in the dashboard header as a slide-over overlay
 
 ### Rendering Context
-`/dashboard/*` renders **outside** the global `<Layout>` wrapper (which includes the public Navbar + Footer). The dashboard has its own header and sidebar — no double-navbar. In `App.jsx`, `<Dashboard>` is a sibling to `<Layout>`, not a child.
+`/dashboard/*` renders **outside** the global `<Layout>` wrapper (which includes the public Navbar + Footer). The dashboard has its own header and sidebar — no double-navbar. In `App.jsx`, use a top-level `<Routes>` split: routes matching `/dashboard/*` render `<Dashboard>` directly (no Layout wrapper), all other routes render inside `<Layout>`. Dark mode and notifications are in Redux state, so both Layout and Dashboard can access them without prop drilling.
+
+### Dashboard Header
+Reuse the sticky header pattern from current Admin. Replace hardcoded mock notifications with the existing Redux notification system (`notificationSlice`) already used in the Navbar.
 
 ### Sidebar Groups (filtered by role)
 
@@ -243,6 +246,7 @@ CREATE TABLE player_notes (
 );
 
 -- Auto-update updated_at on events
+-- Note: function may already exist from initial schema; CREATE OR REPLACE is used for idempotency
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -316,7 +320,7 @@ src/App.jsx                         -- New /dashboard/* routes, redirects from o
 ### Moved (not duplicated)
 Existing components from Admin and CoachingZone move into `Dashboard/components/`:
 - **From Admin:** TrainingManagement, PlayersManagement, ContentManagement, PaymentsOverview, InvestorsManagement, UserAnalytics, StaffPlayerManagement, SuperAdminOverview, UserManagement, DashboardOverview (renamed to AdminOverview, used as reference for QuickStats)
-- **From CoachingZone:** TrainingScheduler, MatchScheduler, FormationBuilder, SquadSelection, MatchEvaluation, DrillSuggestions
+- **From CoachingZone:** TrainingScheduler, MatchScheduler, FormationBuilder, SquadSelection, MatchEvaluation, DrillSuggestions (sub-component of TrainingScheduler, not a standalone route)
 
 ### Intentionally Dropped
 - **ContentZone task board** (`content_tasks` table) — low usage, not part of the new design. Content planning happens via the shared calendar.
