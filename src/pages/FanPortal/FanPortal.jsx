@@ -8,20 +8,26 @@ import POTMVoting from './components/POTMVoting';
 import FanLeaderboard from './components/FanLeaderboard';
 import MatchDayHub from './components/MatchDayHub';
 import Gallery from './components/Gallery';
+import News from './components/News';
+import EventsCalendar from './components/EventsCalendar';
 
-const TABS = [
-  { id: 'match-center', label: 'Match Center', icon: '⚽' },
-  { id: 'fan-wall', label: 'Fan Wall', icon: '💬' },
-  { id: 'vote', label: 'POTM Vote', icon: '🏆' },
-  { id: 'leaderboard', label: 'Leaderboard', icon: '🥇' },
-  { id: 'match-day', label: 'Match Day', icon: '📍' },
-  { id: 'gallery', label: 'Gallery', icon: '📸' },
+const SECTIONS = [
+  { id: 'news', label: 'News' },
+  { id: 'match-center', label: 'Match Center' },
+  { id: 'fan-wall', label: 'Fan Wall' },
+  { id: 'vote', label: 'POTM Vote' },
+  { id: 'leaderboard', label: 'Leaderboard' },
+  { id: 'match-day', label: 'Match Day' },
+  { id: 'gallery', label: 'Gallery' },
+  { id: 'events-calendar', label: 'Events' },
 ];
 
 class FanPortal extends Component {
   constructor(props) {
     super(props);
-    this.state = { activeTab: 'match-center', nextMatch: null };
+    this.state = { nextMatch: null };
+    this.sectionRefs = {};
+    SECTIONS.forEach(s => { this.sectionRefs[s.id] = React.createRef(); });
   }
 
   async componentDidMount() {
@@ -32,35 +38,16 @@ class FanPortal extends Component {
     } catch (err) { /* ignore */ }
   }
 
-  handleTabChange = (tabId) => {
-    this.setState({ activeTab: tabId });
-  };
-
-  renderTabContent = () => {
-    const { activeTab } = this.state;
-    const { user } = this.props;
-
-    switch (activeTab) {
-      case 'match-center':
-        return <MatchCenter />;
-      case 'fan-wall':
-        return <FanWall />;
-      case 'vote':
-        return <POTMVoting />;
-      case 'leaderboard':
-        return <FanLeaderboard />;
-      case 'match-day':
-        return <MatchDayHub />;
-      case 'gallery':
-        return <Gallery />;
-      default:
-        return null;
+  scrollToSection = (id) => {
+    const ref = this.sectionRefs[id];
+    if (ref?.current) {
+      const offset = 80;
+      const top = ref.current.getBoundingClientRect().top + window.scrollY - offset;
+      window.scrollTo({ top, behavior: 'smooth' });
     }
   };
 
   render() {
-    const { activeTab } = this.state;
-
     return (
       <div className="min-h-screen bg-surface-dark">
         {/* Hero */}
@@ -98,38 +85,33 @@ class FanPortal extends Component {
           </div>
         </section>
 
-        {/* Sticky Tab Bar */}
+        {/* Quick Nav */}
         <div className="sticky top-16 z-20 bg-surface-dark/95 backdrop-blur-md border-b border-gray-800">
           <div className="max-w-7xl mx-auto px-4">
             <div className="flex overflow-x-auto scrollbar-hide gap-1 py-2">
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => this.handleTabChange(tab.id)}
-                    className={`
-                      flex-shrink-0 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200
-                      ${isActive
-                        ? 'bg-accent-gold text-black shadow-[0_0_15px_rgba(212,175,55,0.3)]'
-                        : 'text-gray-400 hover:text-white hover:bg-surface-dark-hover'
-                      }
-                    `}
-                  >
-                    <span className="flex items-center gap-2">
-                      <span>{tab.icon}</span>
-                      <span className="hidden sm:inline">{tab.label}</span>
-                    </span>
-                  </button>
-                );
-              })}
+              {SECTIONS.map((section) => (
+                <button
+                  key={section.id}
+                  onClick={() => this.scrollToSection(section.id)}
+                  className="flex-shrink-0 px-4 py-2.5 rounded-lg font-medium text-sm transition-all duration-200 text-gray-400 hover:text-white hover:bg-surface-dark-hover"
+                >
+                  {section.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Tab Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {this.renderTabContent()}
+        {/* All Sections */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+          <div ref={this.sectionRefs['news']}><News /></div>
+          <div ref={this.sectionRefs['match-center']}><MatchCenter /></div>
+          <div ref={this.sectionRefs['fan-wall']}><FanWall /></div>
+          <div ref={this.sectionRefs['vote']}><POTMVoting /></div>
+          <div ref={this.sectionRefs['leaderboard']}><FanLeaderboard /></div>
+          <div ref={this.sectionRefs['match-day']}><MatchDayHub /></div>
+          <div ref={this.sectionRefs['gallery']}><Gallery /></div>
+          <div ref={this.sectionRefs['events-calendar']}><EventsCalendar /></div>
         </div>
       </div>
     );
