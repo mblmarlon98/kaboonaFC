@@ -1,7 +1,9 @@
 -- Role invitation links for staff and player onboarding
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 CREATE TABLE IF NOT EXISTS role_invitations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  token TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(24), 'hex'),
+  token TEXT UNIQUE NOT NULL DEFAULT encode(extensions.gen_random_bytes(24), 'hex'),
   roles TEXT[] NOT NULL DEFAULT ARRAY['fan'],
   label TEXT,
   created_by UUID REFERENCES auth.users(id),
