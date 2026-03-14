@@ -6,6 +6,7 @@ import GlorySection from './components/GlorySection';
 import TrainingGroundSection from './components/TrainingGroundSection';
 import TeamPreviewSection from './components/TeamPreviewSection';
 import CTASection from './components/CTASection';
+import SponsorsSection from './components/SponsorsSection';
 
 class Home extends Component {
   constructor(props) {
@@ -43,6 +44,7 @@ class Home extends Component {
         <TrainingGroundSection content={siteContent.training} />
         <TeamPreviewSection content={siteContent.team_preview} />
         <CTASection content={siteContent.cta} />
+        <SponsorsSection />
       </div>
     );
   }

@@ -5,7 +5,8 @@ dist
 .env*.local
 supabase/.env
 *.log
-*.png
+# Audit screenshots (root level)
+/*.png
 .DS_Store
 test.txt
 .playwright-mcp
