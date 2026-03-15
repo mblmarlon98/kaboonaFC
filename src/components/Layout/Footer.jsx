@@ -175,7 +175,7 @@ class Footer extends Component {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors"
             >
-              <img src="/sponsors/mblmarlon-og.jpg" alt="mbl" className="h-4 w-auto rounded-sm opacity-60" />
+              <img src="/sponsors/mbl-logo.png" alt="mbl" className="h-4 w-auto opacity-60" />
               <span className="font-semibold">mblmarlon</span>
             </a>
           </div>
