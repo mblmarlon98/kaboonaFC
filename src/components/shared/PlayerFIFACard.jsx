@@ -472,7 +472,7 @@ class PlayerFIFACard extends Component {
                 <img
                   src={image}
                   alt={name}
-                  className="w-full h-full object-cover object-top opacity-50"
+                  className="w-full h-full object-cover object-top opacity-70"
                 />
               ) : (
                 <div className="w-full h-full bg-gradient-to-b from-surface-dark-elevated to-surface-dark flex items-center justify-center">
@@ -482,7 +482,7 @@ class PlayerFIFACard extends Component {
                 </div>
               )}
               {/* Gradient Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
               {/* Icon Pattern for Legends */}
               {isIcon && this.renderIconPattern()}
             </div>

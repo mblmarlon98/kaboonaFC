@@ -502,6 +502,38 @@ class Profile extends Component {
     );
   }
 
+  renderProfileCompletionBanner() {
+    const { playerData } = this.state;
+    // Show banner if player has no profile image (indicator they haven't set up their profile)
+    if (playerData?.image) return null;
+
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-gradient-to-r from-accent-gold/20 via-accent-gold/10 to-accent-gold/20 border border-accent-gold/30 rounded-xl p-6 mb-8"
+      >
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="w-14 h-14 rounded-full bg-accent-gold/20 flex items-center justify-center flex-shrink-0">
+            <svg className="w-7 h-7 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="text-center sm:text-left flex-1">
+            <h3 className="text-xl font-display font-bold text-white mb-1">Please Complete Your Profile</h3>
+            <p className="text-white/60 text-sm">Upload your photo and fill in your player details so your FIFA card looks its best.</p>
+          </div>
+          <Link
+            to="/profile/edit"
+            className="px-6 py-3 bg-accent-gold text-black font-bold rounded-lg hover:bg-accent-gold-light transition-colors whitespace-nowrap"
+          >
+            Complete Profile
+          </Link>
+        </div>
+      </motion.div>
+    );
+  }
+
   renderPlayerDashboard() {
     const { playerData } = this.state;
 
@@ -544,6 +576,9 @@ class Profile extends Component {
                 Edit Profile
               </Link>
             </motion.div>
+
+            {/* Profile Completion Banner */}
+            {this.renderProfileCompletionBanner()}
 
             {/* Main Content Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

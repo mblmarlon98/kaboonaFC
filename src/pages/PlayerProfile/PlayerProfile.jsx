@@ -49,7 +49,7 @@ class PlayerProfile extends Component {
 
     try {
       const { data, error } = await supabase
-        .from('players')
+        .from('players_with_profiles')
         .select('*')
         .eq('id', playerId)
         .single();
@@ -123,11 +123,7 @@ class PlayerProfile extends Component {
     if (isLoading) {
       return (
         <div className="min-h-screen bg-surface-dark flex items-center justify-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 border-4 border-accent-gold border-t-transparent rounded-full"
-          />
+          <div className="w-16 h-16 border-4 border-accent-gold border-t-transparent rounded-full animate-spin" />
         </div>
       );
     }

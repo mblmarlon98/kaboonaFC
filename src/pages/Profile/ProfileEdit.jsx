@@ -25,6 +25,7 @@ class ProfileEdit extends Component {
       photoFile: null, // Store the actual file for upload
       isSetup: false,
       setupStep: 1,
+      isPlayer: false,
       formData: {
         // Personal Info
         name: '',
@@ -81,9 +82,12 @@ class ProfileEdit extends Component {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('profile_image_url, full_name')
+        .select('profile_image_url, full_name, roles')
         .eq('id', user.id)
         .single();
+
+      const userRoles = profile?.roles || [];
+      const isPlayer = userRoles.includes('player');
 
       // Use database data if available, fallback to metadata
       const isGoalkeeper = (player?.position || metadata.position) === 'GK';
@@ -120,6 +124,7 @@ class ProfileEdit extends Component {
 
       this.setState({
         isLoading: false,
+        isPlayer,
         formData: profileData,
       });
     } catch (error) {
@@ -933,7 +938,7 @@ class ProfileEdit extends Component {
   };
 
   render() {
-    const { isLoading, isSaving, hasChanges, formData, errors, redirectToProfile, isSetup } = this.state;
+    const { isLoading, isSaving, hasChanges, formData, errors, redirectToProfile, isSetup, isPlayer } = this.state;
 
     if (redirectToProfile) {
       return <Navigate to="/profile" replace />;
@@ -1014,7 +1019,7 @@ class ProfileEdit extends Component {
                   Edit Profile
                 </h1>
                 <p className="text-white/60 mt-2">
-                  Update your player information and stats
+                  {isPlayer ? 'Update your player information and stats' : 'Update your profile information'}
                 </p>
               </div>
               <div className="mt-4 sm:mt-0 flex items-center gap-3">
@@ -1054,35 +1059,37 @@ class ProfileEdit extends Component {
 
         {/* Main Content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            {/* Left Column - Live FIFA Card Preview */}
-            <div className="lg:col-span-4">
-              <motion.div
-                className="sticky top-8"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-              >
-                <h3 className="text-lg font-display font-bold text-white uppercase tracking-wider mb-4">
-                  Live Preview
-                </h3>
-                <div className="flex justify-center">
-                  <PlayerFIFACard
-                    name={formData.name}
-                    position={formData.position}
-                    alternate_positions={formData.alternatePositions}
-                    number={parseInt(formData.number) || 10}
-                    country={formData.country}
-                    image={formData.profilePhoto}
-                    stats={currentStats}
-                    skill_moves={formData.skillMoves}
-                    weak_foot={formData.weakFoot}
-                  />
-                </div>
-              </motion.div>
-            </div>
+          <div className={`grid grid-cols-1 ${isPlayer ? 'lg:grid-cols-12' : ''} gap-8`}>
+            {/* Left Column - Live FIFA Card Preview (players only) */}
+            {isPlayer && (
+              <div className="lg:col-span-4">
+                <motion.div
+                  className="sticky top-8"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <h3 className="text-lg font-display font-bold text-white uppercase tracking-wider mb-4">
+                    Live Preview
+                  </h3>
+                  <div className="flex justify-center">
+                    <PlayerFIFACard
+                      name={formData.name}
+                      position={formData.position}
+                      alternate_positions={formData.alternatePositions}
+                      number={parseInt(formData.number) || 10}
+                      country={formData.country}
+                      image={formData.profilePhoto}
+                      stats={currentStats}
+                      skill_moves={formData.skillMoves}
+                      weak_foot={formData.weakFoot}
+                    />
+                  </div>
+                </motion.div>
+              </div>
+            )}
 
             {/* Right Column - Edit Forms */}
-            <div className="lg:col-span-8 space-y-8">
+            <div className={`${isPlayer ? 'lg:col-span-8' : ''} space-y-8`}>
               {/* Personal Information */}
               <motion.div
                 className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
@@ -1149,21 +1156,35 @@ class ProfileEdit extends Component {
                     )}
                   </div>
 
-                  {/* Email (Read-only) */}
+                  {/* Email (Disabled) */}
                   <div>
                     <label className="block text-white/60 text-sm mb-2">Email Address</label>
                     <input
                       type="email"
                       value={formData.email}
-                      readOnly
-                      className="w-full px-4 py-3 bg-surface-dark border border-white/10 rounded-lg text-white/50 cursor-not-allowed"
+                      disabled
+                      className="w-full px-4 py-3 bg-surface-dark border border-white/10 rounded-lg text-white/50 cursor-not-allowed opacity-60"
                     />
                     <p className="text-white/40 text-xs mt-1">Email cannot be changed</p>
                   </div>
+
+                  {/* Country (shown here for non-players, in player section for players) */}
+                  {!isPlayer && (
+                    <div>
+                      <label className="block text-white/60 text-sm mb-2">Nationality</label>
+                      <CountrySelect
+                        name="country"
+                        value={formData.country}
+                        onChange={this.handleInputChange}
+                        placeholder="Select your country"
+                      />
+                    </div>
+                  )}
                 </div>
               </motion.div>
 
-              {/* Player Information */}
+              {/* Player Information (players only) */}
+              {!isPlayer ? null : (
               <motion.div
                 className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
@@ -1361,8 +1382,10 @@ class ProfileEdit extends Component {
                   </div>
                 </div>
               </motion.div>
+              )}
 
-              {/* Self-Rated Stats */}
+              {/* Self-Rated Stats (players only) */}
+              {isPlayer && (
               <motion.div
                 className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
                 initial={{ opacity: 0, y: 20 }}
@@ -1396,6 +1419,7 @@ class ProfileEdit extends Component {
                   ))}
                 </div>
               </motion.div>
+              )}
 
               {/* Subscription Management
               <motion.div
@@ -1448,6 +1472,44 @@ class ProfileEdit extends Component {
                 </div>
               </motion.div>
               */}
+
+              {/* Bottom Save Button */}
+              <motion.div
+                className="flex items-center justify-between pt-4"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+              >
+                <Link
+                  to="/profile"
+                  className="px-6 py-3 border border-white/20 text-white font-medium rounded-lg hover:bg-white/5 transition-colors"
+                >
+                  Cancel
+                </Link>
+                <motion.button
+                  onClick={this.handleSubmit}
+                  disabled={isSaving || !hasChanges}
+                  className={`px-8 py-3 font-bold rounded-lg transition-colors flex items-center gap-2 ${
+                    hasChanges
+                      ? 'bg-accent-gold text-black hover:bg-accent-gold-light'
+                      : 'bg-white/10 text-white/40 cursor-not-allowed'
+                  }`}
+                  whileHover={hasChanges ? { scale: 1.02 } : {}}
+                  whileTap={hasChanges ? { scale: 0.98 } : {}}
+                >
+                  {isSaving ? (
+                    <>
+                      <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
+                </motion.button>
+              </motion.div>
             </div>
           </div>
         </div>
