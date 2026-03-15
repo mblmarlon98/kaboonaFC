@@ -565,7 +565,7 @@ class FootballField extends Component {
       >
         {slotData ? (
           <div
-            className="relative cursor-pointer"
+            className="relative cursor-pointer group"
             draggable={isEditMode}
             onDragStart={(e) => isEditMode && this.handleDragStartFromSlot(e, slotData.player, slotKey)}
             onDragEnd={this.handleDragEnd}
@@ -592,14 +592,14 @@ class FootballField extends Component {
                 <span className="text-white text-xs font-bold">✕</span>
               </div>
             )}
-            {/* Remove button - always visible */}
+            {/* Remove button - visible on hover only */}
             {isEditMode && (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   this.handleRemovePlayer(slotKey);
                 }}
-                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center z-10 shadow-md"
+                className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center z-10 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 ×
               </button>

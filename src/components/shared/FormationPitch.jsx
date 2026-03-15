@@ -314,7 +314,7 @@ class FormationPitch extends Component {
       >
         {placedPlayer ? (
           <div
-            className="relative cursor-pointer"
+            className="relative cursor-pointer group"
             onClick={() => this.handleSlotClick(slotName)}
           >
             <PlayerFIFACard
@@ -338,7 +338,7 @@ class FormationPitch extends Component {
             {!readOnly && (
               <button
                 onClick={(e) => this.handleRemovePlayer(e, slotName)}
-                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center z-10 shadow-md"
+                className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-[10px] flex items-center justify-center z-10 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 ×
               </button>
