@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { supabase } from '../../../services/supabase';
+import { createNotification } from '../../../services/notificationService';
 
 const CATEGORIES = [
   { value: 'general', label: 'General', color: 'bg-gray-500/20 text-gray-400' },
@@ -117,13 +118,26 @@ class PlayerNotes extends Component {
 
     this.setState({ savingNote: true });
     try {
-      const { error } = await supabase.from('player_notes').insert({
+      const { data: result, error } = await supabase.from('player_notes').insert({
         player_id: selectedPlayerId,
         author_id: user?.id,
         note: noteText.trim(),
         category: noteCategory,
-      });
+      }).select().single();
       if (error) throw error;
+
+      // Send notification to the player (skip injury-category notes)
+      if (noteCategory !== 'injury') {
+        const authorName = user?.full_name || 'Coach';
+        await createNotification({
+          userId: selectedPlayerId,
+          title: `New note from ${authorName}`,
+          body: noteText.trim().substring(0, 100),
+          type: 'note_created',
+          referenceType: 'note',
+          referenceId: result.id,
+        });
+      }
 
       this.setState({ noteText: '', noteCategory: 'general', savingNote: false });
       this.showNotification('Note added successfully');

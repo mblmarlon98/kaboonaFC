@@ -1,5 +1,6 @@
 import supabase from './supabase';
 import { createBulkNotifications } from './notificationService';
+import { getInjuredPlayerIds } from './injuryService';
 
 /**
  * Scheduling service for training sessions and match management
@@ -202,7 +203,13 @@ export const completeMatch = async (matchId, scoreFor, scoreAgainst) => {
  * @returns {Promise<Array>} The created invitations
  */
 export const sendInvitations = async (eventType, eventId, playerIds) => {
-  const rows = playerIds.map((playerId) => ({
+  // Filter out injured players
+  const injuredIds = await getInjuredPlayerIds();
+  const healthyPlayerIds = playerIds.filter((id) => !injuredIds.has(id));
+
+  if (healthyPlayerIds.length === 0) return [];
+
+  const rows = healthyPlayerIds.map((playerId) => ({
     event_type: eventType,
     event_id: eventId,
     player_id: playerId,
@@ -244,7 +251,7 @@ export const sendInvitations = async (eventType, eventId, playerIds) => {
       : 'A new match has been scheduled';
   }
 
-  await createBulkNotifications(playerIds, {
+  await createBulkNotifications(healthyPlayerIds, {
     title: notificationTitle,
     body: notificationBody,
     type: 'event_invitation',
