@@ -10,17 +10,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-
-/**
- * Mock data for top scorers
- */
-const MOCK_SCORERS_DATA = [
-  { name: 'Carlos Rodriguez', goals: 14, assists: 6, team: 'KABOONA FC', isKaboona: true },
-  { name: 'Jamal Sterling', goals: 11, assists: 8, team: 'KABOONA FC', isKaboona: true },
-  { name: 'Kenji Tanaka', goals: 7, assists: 12, team: 'KABOONA FC', isKaboona: true },
-  { name: 'Ryan O\'Brien', goals: 6, assists: 5, team: 'KABOONA FC', isKaboona: true },
-  { name: 'Samuel Okonkwo', goals: 4, assists: 7, team: 'KABOONA FC', isKaboona: true },
-];
+import { supabase } from '../../../services/supabase';
 
 /**
  * Custom tooltip component
@@ -70,19 +60,27 @@ class TopScorersChart extends Component {
 
   fetchScorersData = async () => {
     try {
-      // Simulate API call
-      setTimeout(() => {
-        this.setState({
-          scorersData: MOCK_SCORERS_DATA,
-          isLoading: false,
-        });
-      }, 600);
+      const { data, error } = await supabase
+        .from('players_full')
+        .select('id, name, season_goals, season_assists, profile_image_url')
+        .gt('season_goals', 0)
+        .order('season_goals', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      const scorersData = (data || []).map(p => ({
+        name: p.name || 'Unknown',
+        goals: p.season_goals || 0,
+        assists: p.season_assists || 0,
+        team: 'KABOONA FC',
+        isKaboona: true,
+      }));
+
+      this.setState({ scorersData, isLoading: false });
     } catch (error) {
       console.warn('Error fetching scorers data:', error);
-      this.setState({
-        scorersData: MOCK_SCORERS_DATA,
-        isLoading: false,
-      });
+      this.setState({ scorersData: [], isLoading: false });
     }
   };
 
@@ -127,6 +125,11 @@ class TopScorersChart extends Component {
         </div>
 
         {/* Chart */}
+        {scorersData.length === 0 ? (
+          <div className="h-[300px] flex items-center justify-center">
+            <p className="text-white/40">No goals recorded yet this season.</p>
+          </div>
+        ) : (
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -168,6 +171,8 @@ class TopScorersChart extends Component {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
+        )}
 
         {/* Stats Summary */}
         <div className="mt-6 grid grid-cols-3 gap-4">

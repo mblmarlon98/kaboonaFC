@@ -11,52 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-
-/**
- * Mock data for disciplinary records - "Wall of Shame"
- */
-const MOCK_DISCIPLINARY_DATA = [
-  {
-    name: 'Crazy Legs Kamal',
-    yellowCards: 8,
-    redCards: 1,
-    fouls: 24,
-    nickname: 'The Slide Tackle Specialist',
-    quote: '"The ball was there... somewhere"',
-  },
-  {
-    name: 'Hot Head Harris',
-    yellowCards: 6,
-    redCards: 2,
-    fouls: 18,
-    nickname: "Referee's Best Friend",
-    quote: '"What do you mean that was a foul?"',
-  },
-  {
-    name: 'Wild Card Wafi',
-    yellowCards: 5,
-    redCards: 0,
-    fouls: 15,
-    nickname: 'Creative Fouls Artist',
-    quote: '"I barely touched him!"',
-  },
-  {
-    name: 'Thunderfoot Tariq',
-    yellowCards: 4,
-    redCards: 1,
-    fouls: 12,
-    nickname: 'The Human Wrecking Ball',
-    quote: '"I was going for the ball, I swear"',
-  },
-  {
-    name: 'Danger Dan',
-    yellowCards: 3,
-    redCards: 0,
-    fouls: 10,
-    nickname: 'The Late Challenger',
-    quote: '"My timing is just... unique"',
-  },
-];
+import { supabase } from '../../../services/supabase';
 
 /**
  * Custom tooltip component
@@ -69,8 +24,7 @@ const CustomTooltip = ({ active, payload, label }) => {
     return (
       <div className="bg-surface-dark-elevated border border-red-500/30 rounded-lg p-4 shadow-xl">
         <p className="text-red-400 font-bold text-lg">{data.name}</p>
-        <p className="text-white/60 italic text-sm mb-2">"{data.nickname}"</p>
-        <div className="space-y-1">
+        <div className="space-y-1 mt-2">
           <div className="flex items-center gap-2">
             <div className="w-3 h-4 bg-yellow-400 rounded-sm" />
             <span className="text-white">Yellow Cards: {data.yellowCards}</span>
@@ -79,7 +33,6 @@ const CustomTooltip = ({ active, payload, label }) => {
             <div className="w-3 h-4 bg-red-500 rounded-sm" />
             <span className="text-white">Red Cards: {data.redCards}</span>
           </div>
-          <p className="text-white/60 text-sm mt-2">Total Fouls: {data.fouls}</p>
         </div>
       </div>
     );
@@ -106,18 +59,27 @@ class DisciplinaryChart extends Component {
 
   fetchDisciplinaryData = async () => {
     try {
-      setTimeout(() => {
-        this.setState({
-          disciplinaryData: MOCK_DISCIPLINARY_DATA,
-          isLoading: false,
-        });
-      }, 900);
+      const { data, error } = await supabase
+        .from('players_full')
+        .select('id, name, season_yellows, season_reds, profile_image_url')
+        .or('season_yellows.gt.0,season_reds.gt.0')
+        .order('season_reds', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      const disciplinaryData = (data || [])
+        .map(p => ({
+          name: p.name || 'Unknown',
+          yellowCards: p.season_yellows || 0,
+          redCards: p.season_reds || 0,
+        }))
+        .sort((a, b) => (b.yellowCards + b.redCards * 3) - (a.yellowCards + a.redCards * 3));
+
+      this.setState({ disciplinaryData, isLoading: false });
     } catch (error) {
       console.warn('Error fetching disciplinary data:', error);
-      this.setState({
-        disciplinaryData: MOCK_DISCIPLINARY_DATA,
-        isLoading: false,
-      });
+      this.setState({ disciplinaryData: [], isLoading: false });
     }
   };
 
@@ -162,6 +124,12 @@ class DisciplinaryChart extends Component {
           <p className="text-white/50 text-sm mt-1">Our most... enthusiastic players</p>
         </div>
 
+        {disciplinaryData.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-white/40">No disciplinary records yet this season.</p>
+          </div>
+        ) : (
+        <>
         {/* Stats Summary */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div className="bg-yellow-500/10 rounded-lg p-4 text-center border border-yellow-500/20">
@@ -247,7 +215,6 @@ class DisciplinaryChart extends Component {
                   </div>
                   <div>
                     <p className="text-white font-medium">{player.name}</p>
-                    <p className="text-white/40 text-sm italic">{player.nickname}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -269,8 +236,9 @@ class DisciplinaryChart extends Component {
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-4 pt-4 border-t border-white/10"
                 >
-                  <p className="text-white/60 italic text-sm">{player.quote}</p>
-                  <p className="text-white/40 text-xs mt-2">Total Fouls: {player.fouls}</p>
+                  <p className="text-white/40 text-xs">
+                    Total Cards: {player.yellowCards + player.redCards}
+                  </p>
                 </motion.div>
               )}
             </motion.div>
@@ -281,6 +249,8 @@ class DisciplinaryChart extends Component {
         <p className="text-white/30 text-xs mt-6 text-center italic">
           * All in good fun! We love these guys (even when they get carded).
         </p>
+        </>
+        )}
       </motion.div>
     );
   }

@@ -1,44 +1,9 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
+import { supabase } from '../../../services/supabase';
 
 /**
- * Generate mock attendance data for the past 12 weeks
- */
-const generateMockAttendanceData = () => {
-  const weeks = [];
-  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const trainingDays = [0, 2, 5]; // Monday, Wednesday, Saturday
-
-  for (let week = 0; week < 12; week++) {
-    const weekData = days.map((day, dayIndex) => {
-      const isTrainingDay = trainingDays.includes(dayIndex);
-      if (!isTrainingDay) {
-        return { day, attendance: null, week: week + 1 };
-      }
-      // Generate random attendance between 60-100%
-      const attendance = isTrainingDay ? Math.floor(Math.random() * 40) + 60 : null;
-      return { day, attendance, week: week + 1 };
-    });
-    weeks.push(weekData);
-  }
-  return weeks;
-};
-
-const MOCK_ATTENDANCE_DATA = generateMockAttendanceData();
-
-/**
- * Mock player attendance data
- */
-const MOCK_TOP_ATTENDANCE = [
-  { name: 'Samuel Okonkwo', sessions: 34, total: 36, percentage: 94 },
-  { name: 'Pierre Dubois', sessions: 33, total: 36, percentage: 92 },
-  { name: 'Carlos Rodriguez', sessions: 32, total: 36, percentage: 89 },
-  { name: 'Lucas Mendes', sessions: 31, total: 36, percentage: 86 },
-  { name: 'Viktor Kozlov', sessions: 30, total: 36, percentage: 83 },
-];
-
-/**
- * AttendanceHeatmap - Visual showing attendance patterns
+ * AttendanceHeatmap - Training attendance heatmap from real data
  */
 class AttendanceHeatmap extends Component {
   constructor(props) {
@@ -57,18 +22,115 @@ class AttendanceHeatmap extends Component {
 
   fetchAttendanceData = async () => {
     try {
-      setTimeout(() => {
-        this.setState({
-          attendanceData: MOCK_ATTENDANCE_DATA,
-          topAttendance: MOCK_TOP_ATTENDANCE,
-          isLoading: false,
+      // Get training sessions from the last 12 weeks
+      const twelveWeeksAgo = new Date();
+      twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 84);
+      const cutoff = twelveWeeksAgo.toISOString().split('T')[0];
+
+      const [sessionsRes, invitationsRes] = await Promise.all([
+        supabase
+          .from('training_sessions')
+          .select('id, session_date')
+          .gte('session_date', cutoff)
+          .order('session_date', { ascending: true }),
+        supabase
+          .from('event_invitations')
+          .select('event_id, status, profile_id, profiles(full_name)')
+          .eq('event_type', 'training'),
+      ]);
+
+      if (sessionsRes.error) throw sessionsRes.error;
+      if (invitationsRes.error) throw invitationsRes.error;
+
+      const sessions = sessionsRes.data || [];
+      const invitations = invitationsRes.data || [];
+
+      // Build invitation map: event_id -> invitations[]
+      const invByEvent = {};
+      invitations.forEach((inv) => {
+        if (!invByEvent[inv.event_id]) invByEvent[inv.event_id] = [];
+        invByEvent[inv.event_id].push(inv);
+      });
+
+      // Build weekly heatmap data
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const weeks = [];
+      const now = new Date();
+
+      for (let w = 0; w < 12; w++) {
+        const weekStart = new Date(twelveWeeksAgo);
+        weekStart.setDate(weekStart.getDate() + w * 7);
+
+        const weekData = days.map((day, dayIndex) => {
+          // Find sessions on this day
+          const targetDate = new Date(weekStart);
+          targetDate.setDate(targetDate.getDate() + dayIndex);
+          const dateStr = targetDate.toISOString().split('T')[0];
+
+          const matchingSessions = sessions.filter(
+            (s) => s.session_date === dateStr
+          );
+
+          if (matchingSessions.length === 0) {
+            return { day, attendance: null, week: w + 1 };
+          }
+
+          // Calculate attendance % for this day's sessions
+          let totalInvited = 0;
+          let totalAttended = 0;
+          matchingSessions.forEach((s) => {
+            const invs = invByEvent[s.id] || [];
+            totalInvited += invs.length;
+            totalAttended += invs.filter(
+              (i) => i.status === 'attended' || i.status === 'accepted'
+            ).length;
+          });
+
+          const attendance =
+            totalInvited > 0
+              ? Math.round((totalAttended / totalInvited) * 100)
+              : null;
+
+          return { day, attendance, week: w + 1 };
         });
-      }, 800);
+        weeks.push(weekData);
+      }
+
+      // Build top attendance: per-player aggregation
+      const playerStats = {};
+      invitations.forEach((inv) => {
+        const name = inv.profiles?.full_name;
+        if (!name) return;
+        if (!playerStats[name]) {
+          playerStats[name] = { name, attended: 0, total: 0 };
+        }
+        playerStats[name].total++;
+        if (inv.status === 'attended' || inv.status === 'accepted') {
+          playerStats[name].attended++;
+        }
+      });
+
+      const topAttendance = Object.values(playerStats)
+        .filter((p) => p.total >= 3) // minimum 3 sessions to qualify
+        .map((p) => ({
+          name: p.name,
+          sessions: p.attended,
+          total: p.total,
+          percentage: Math.round((p.attended / p.total) * 100),
+        }))
+        .sort((a, b) => b.percentage - a.percentage)
+        .slice(0, 5);
+
+      this.setState({
+        attendanceData: weeks,
+        topAttendance,
+        isLoading: false,
+      });
     } catch (error) {
       console.warn('Error fetching attendance data:', error);
       this.setState({
-        attendanceData: MOCK_ATTENDANCE_DATA,
-        topAttendance: MOCK_TOP_ATTENDANCE,
+        attendanceData: [],
+        topAttendance: [],
         isLoading: false,
       });
     }
@@ -81,12 +143,6 @@ class AttendanceHeatmap extends Component {
     if (attendance >= 70) return 'bg-yellow-500';
     if (attendance >= 60) return 'bg-orange-500';
     return 'bg-red-500';
-  };
-
-  getHeatOpacity = (attendance) => {
-    if (attendance === null) return 'opacity-20';
-    const opacity = Math.min(100, Math.max(40, attendance));
-    return `opacity-${Math.round(opacity / 10) * 10}`;
   };
 
   handleCellHover = (weekIndex, dayIndex) => {
@@ -112,6 +168,11 @@ class AttendanceHeatmap extends Component {
       );
     }
 
+    // Check if there's any real data
+    const hasData = attendanceData.some((week) =>
+      week.some((cell) => cell.attendance !== null)
+    );
+
     return (
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -130,13 +191,19 @@ class AttendanceHeatmap extends Component {
           <p className="text-white/50 text-sm mt-1">Training session attendance over 12 weeks</p>
         </div>
 
+        {!hasData ? (
+          <div className="py-12 text-center">
+            <p className="text-white/40">No attendance data recorded yet.</p>
+          </div>
+        ) : (
+        <>
         {/* Heatmap Grid */}
         <div className="overflow-x-auto">
           <div className="min-w-[500px]">
             {/* Day labels */}
             <div className="flex mb-2">
               <div className="w-12" />
-              {days.map((day, i) => (
+              {days.map((day) => (
                 <div key={day} className="flex-1 text-center text-xs text-white/50">
                   {day}
                 </div>
@@ -202,6 +269,7 @@ class AttendanceHeatmap extends Component {
         </div>
 
         {/* Top Attendance List */}
+        {topAttendance.length > 0 && (
         <div className="mt-8 pt-6 border-t border-white/10">
           <h4 className="text-sm font-semibold text-white/80 uppercase tracking-wider mb-4">
             Most Consistent Players
@@ -244,6 +312,9 @@ class AttendanceHeatmap extends Component {
             ))}
           </div>
         </div>
+        )}
+        </>
+        )}
       </motion.div>
     );
   }

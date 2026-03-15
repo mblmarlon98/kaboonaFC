@@ -1,31 +1,6 @@
 import React, { Component } from 'react';
 import { motion } from 'framer-motion';
-
-/**
- * Mock data for clean sheets
- */
-const MOCK_CLEANSHEETS_DATA = [
-  {
-    name: 'Erik Blackwood',
-    cleanSheets: 8,
-    matches: 14,
-    saves: 52,
-    savePercentage: 78,
-    team: 'KABOONA FC',
-    position: 'GK',
-    number: 1,
-  },
-  {
-    name: 'Marcus Chen',
-    cleanSheets: 4,
-    matches: 6,
-    saves: 24,
-    savePercentage: 72,
-    team: 'KABOONA FC',
-    position: 'GK',
-    number: 13,
-  },
-];
+import { supabase } from '../../../services/supabase';
 
 /**
  * CleanSheetsLeaderboard - Goalkeeper stats leaderboard
@@ -45,18 +20,48 @@ class CleanSheetsLeaderboard extends Component {
 
   fetchCleanSheetsData = async () => {
     try {
-      setTimeout(() => {
-        this.setState({
-          cleanSheetsData: MOCK_CLEANSHEETS_DATA,
-          isLoading: false,
-        });
-      }, 700);
+      // Get GKs from players_full
+      const { data: gks, error: gkError } = await supabase
+        .from('players_full')
+        .select('id, name, jersey_number, matches_played, profile_image_url')
+        .eq('position', 'GK');
+
+      if (gkError) throw gkError;
+
+      if (!gks || gks.length === 0) {
+        this.setState({ cleanSheetsData: [], isLoading: false });
+        return;
+      }
+
+      // Get clean sheet counts per GK
+      const { data: stats, error: statsError } = await supabase
+        .from('player_stats')
+        .select('player_id, clean_sheet')
+        .in('player_id', gks.map(g => g.id))
+        .eq('clean_sheet', true);
+
+      if (statsError) throw statsError;
+
+      const csCountMap = {};
+      (stats || []).forEach(s => {
+        csCountMap[s.player_id] = (csCountMap[s.player_id] || 0) + 1;
+      });
+
+      const cleanSheetsData = gks
+        .map(gk => ({
+          name: gk.name || 'Unknown',
+          cleanSheets: csCountMap[gk.id] || 0,
+          matches: gk.matches_played || 0,
+          team: 'KABOONA FC',
+          position: 'GK',
+          number: gk.jersey_number || 0,
+        }))
+        .sort((a, b) => b.cleanSheets - a.cleanSheets);
+
+      this.setState({ cleanSheetsData, isLoading: false });
     } catch (error) {
       console.warn('Error fetching clean sheets data:', error);
-      this.setState({
-        cleanSheetsData: MOCK_CLEANSHEETS_DATA,
-        isLoading: false,
-      });
+      this.setState({ cleanSheetsData: [], isLoading: false });
     }
   };
 
@@ -118,6 +123,11 @@ class CleanSheetsLeaderboard extends Component {
         </div>
 
         {/* Leaderboard */}
+        {cleanSheetsData.length === 0 ? (
+          <div className="py-12 text-center">
+            <p className="text-white/40">No goalkeeper data available yet.</p>
+          </div>
+        ) : (
         <div className="space-y-4">
           {cleanSheetsData.map((keeper, index) => (
             <motion.div
@@ -156,18 +166,14 @@ class CleanSheetsLeaderboard extends Component {
               </div>
 
               {/* Detailed Stats */}
-              <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-3 gap-4">
+              <div className="mt-4 pt-4 border-t border-white/5 grid grid-cols-2 gap-4">
                 <div className="text-center">
                   <p className="text-lg font-bold text-white">{keeper.matches}</p>
                   <p className="text-white/40 text-xs">Matches</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-bold text-white">{keeper.saves}</p>
-                  <p className="text-white/40 text-xs">Saves</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-lg font-bold text-green-400">{keeper.savePercentage}%</p>
-                  <p className="text-white/40 text-xs">Save %</p>
+                  <p className="text-lg font-bold text-green-400">{keeper.matches > 0 ? Math.round((keeper.cleanSheets / keeper.matches) * 100) : 0}%</p>
+                  <p className="text-white/40 text-xs">CS Rate</p>
                 </div>
               </div>
 
@@ -189,6 +195,7 @@ class CleanSheetsLeaderboard extends Component {
             </motion.div>
           ))}
         </div>
+        )}
       </motion.div>
     );
   }
