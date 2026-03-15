@@ -165,6 +165,20 @@ class Footer extends Component {
               </div>
             </div>
           </div>
+
+          {/* Created by */}
+          <div className="mt-6 flex items-center justify-center gap-2 text-white/20 text-xs">
+            <span>Website created by</span>
+            <a
+              href="https://mblmarlon.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-white/30 hover:text-white/60 transition-colors"
+            >
+              <img src="/sponsors/mblmarlon-og.jpg" alt="mbl" className="h-4 w-auto rounded-sm opacity-60" />
+              <span className="font-semibold">mblmarlon</span>
+            </a>
+          </div>
         </div>
       </footer>
     );
