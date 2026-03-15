@@ -22,6 +22,13 @@ class HeroSection extends Component {
   }
 
   render() {
+    const c = this.props.content || {};
+    const clubName = c.clubName || 'KABOONA';
+    const clubSuffix = c.clubSuffix || 'FC';
+    const tagline = c.tagline || 'Rise to Glory';
+    const ctaText1 = c.ctaText1 || 'Join the Team';
+    const ctaText2 = c.ctaText2 || 'Become a Fan';
+
     return (
       <section
         ref={this.heroRef}
@@ -47,17 +54,60 @@ class HeroSection extends Component {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-accent-gold/10 rounded-full blur-[120px]" />
 
         <div className="relative z-10 text-center px-4 max-w-5xl mx-auto">
-          {/* Logo */}
+          {/* Tiger Logo */}
           <motion.div
             ref={this.tigerRef}
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="mb-8"
           >
-            <div className="w-48 h-48 md:w-64 md:h-64 lg:w-80 lg:h-80 mx-auto relative">
+            <div className="w-32 h-32 md:w-48 md:h-48 mx-auto relative">
               <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="Kaboona FC" className="w-full h-full object-contain drop-shadow-[0_0_30px_rgba(212,175,55,0.3)]" />
               <div className="absolute inset-0 animate-glow rounded-full" />
             </div>
+          </motion.div>
+
+          {/* Club Name */}
+          <motion.h1
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+            className="font-display text-6xl md:text-8xl lg:text-9xl font-bold tracking-wider text-white mb-4"
+          >
+            {clubName}
+            <span className="block text-accent-gold">{clubSuffix}</span>
+          </motion.h1>
+
+          {/* Tagline */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="text-xl md:text-2xl text-white/70 font-light tracking-wide mb-12"
+          >
+            {tagline}
+          </motion.p>
+
+          {/* CTA Buttons */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.7 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
+            <a
+              href="/register"
+              className="px-8 py-4 bg-accent-gold text-black font-semibold rounded-lg hover:bg-accent-gold-light transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-accent-gold/30"
+            >
+              {ctaText1}
+            </a>
+            <a
+              href="/fan-portal"
+              className="px-8 py-4 border-2 border-white/30 text-white font-semibold rounded-lg hover:border-accent-gold hover:text-accent-gold transition-all duration-300"
+            >
+              {ctaText2}
+            </a>
           </motion.div>
         </div>
 

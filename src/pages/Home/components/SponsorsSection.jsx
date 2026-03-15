@@ -14,7 +14,7 @@ const SPONSORS = [
     description:
       'Explore 1,000+ cities with free audio guides for landmarks, museums, and hidden gems. Self-guided walking tours on your phone — no download needed.',
     tier: 'gold',
-    features: ['1,000+ Cities', 'AI-Powered Narration', 'Free to Use', 'No Download'],
+    features: ['1,000+ Cities', 'AI-Powered Narration', 'Free to Use'],
   },
 ];
 
@@ -85,43 +85,12 @@ class SponsorsSection extends Component {
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
               style={{ minHeight: '200px' }}
             />
-            {/* Gradient overlay bottom */}
-            <div
-              className="absolute inset-0"
-              style={{
-                background: 'linear-gradient(to top, #0f0a1a 0%, rgba(15,10,26,0.6) 40%, transparent 100%)',
-              }}
-            />
-            {/* Purple tint overlay */}
-            <div
-              className="absolute inset-0 opacity-20"
-              style={{
-                background: 'linear-gradient(135deg, rgba(147,51,234,0.3) 0%, transparent 60%)',
-              }}
-            />
           </div>
 
           {/* Content area */}
-          <div className="relative p-6 md:p-8 -mt-12 z-10">
-            <div className="flex items-start gap-5">
-              {/* Mascot logo */}
-              <div
-                className="flex-shrink-0 w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center p-2 transition-all duration-300 group-hover:scale-105"
-                style={{
-                  background: 'linear-gradient(135deg, #1a0f2e, #2d1b4e)',
-                  border: '2px solid rgba(147, 51, 234, 0.4)',
-                  boxShadow: '0 8px 32px rgba(147, 51, 234, 0.2)',
-                }}
-              >
-                <img
-                  src={sponsor.logo}
-                  alt={sponsor.name}
-                  className="w-full h-full object-contain"
-                />
-              </div>
-
-              {/* Text content */}
-              <div className="flex-1 min-w-0">
+          <div className="relative p-6 md:p-8 z-10">
+            <div>
+              <div>
                 <h3
                   className="text-xl md:text-2xl font-bold mb-1 transition-colors duration-300"
                   style={{ color: '#e9d5ff' }}
