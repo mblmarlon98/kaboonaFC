@@ -39,6 +39,7 @@ class AboutSection extends Component {
 
   fetchRealStats = async () => {
     try {
+      const c = this.props.content || {};
       const [membersRes, playersRes] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }).contains('roles', ['player']),
@@ -46,7 +47,7 @@ class AboutSection extends Component {
 
       this.setState({
         realStats: [
-          { value: 'Est. 2024', label: 'Founded' },
+          { value: c.stat1Value || 'Est. 2025', label: c.stat1Label || 'Founded' },
           { value: membersRes.count || 0, label: 'Members' },
           { value: playersRes.count || 0, label: 'Players' },
         ],

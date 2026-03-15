@@ -147,32 +147,20 @@ class Register extends Component {
         // (setting user triggers re-render → Navigate to /profile before redirectTo is set)
         if (inviteData) {
           try {
-            // Update user profile with invite roles
-            await supabase
-              .from('profiles')
-              .update({ role: inviteData.roles[0], roles: inviteData.roles })
-              .eq('id', data.user.id);
+            // Use SECURITY DEFINER RPC to assign roles (bypasses RLS timing issues)
+            const { data: claimResult, error: claimError } = await supabase.rpc(
+              'claim_role_invitation',
+              { invite_token: inviteData.token, user_id: data.user.id }
+            );
 
-            // Increment invite use count
-            await supabase
-              .from('role_invitations')
-              .update({ use_count: inviteData.use_count + 1 })
-              .eq('id', inviteData.id);
+            if (claimError) throw claimError;
 
-            // Determine redirect based on invited role
-            let redirect = '/profile';
-            if (inviteData.roles.includes('player')) {
-              await supabase
-                .from('players')
-                .insert({ user_id: data.user.id, position: 'CM' });
-              redirect = '/profile/edit?setup=true';
-            } else if (inviteData.roles.some((r) => ['admin', 'super_admin', 'owner', 'manager'].includes(r))) {
-              redirect = '/dashboard';
-            } else if (inviteData.roles.includes('coach')) {
-              redirect = '/dashboard/training';
-            } else if (inviteData.roles.some((r) => ['editor', 'marketing'].includes(r))) {
-              redirect = '/dashboard/content';
+            const result = claimResult || {};
+            if (!result.success) {
+              console.error('Invitation claim failed:', result.error);
             }
+
+            const redirect = result.redirect || '/profile';
 
             // Set redirect state FIRST, then dispatch user to Redux in callback
             this.setState({ isSubmitting: false, redirectTo: redirect }, () => {
