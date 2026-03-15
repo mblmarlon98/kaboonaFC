@@ -13,6 +13,7 @@ import AuthCallback from './pages/Auth/AuthCallback';
 import { Profile, ProfileEdit } from './pages/Profile';
 import Notifications from './pages/Notifications';
 import PlayerProfile from './pages/PlayerProfile';
+import MemberProfile from './pages/MemberProfile';
 import ProtectedRoute from './components/ProtectedRoute';
 import Dashboard from './pages/Dashboard/Dashboard';
 import PlayerModalProvider from './components/shared/PlayerModalContext';
@@ -211,6 +212,7 @@ class App extends Component {
                   <Route path="/" element={<Home />} />
                   <Route path="/our-team" element={<OurTeam />} />
                   <Route path="/player/:playerId" element={<PlayerProfile />} />
+                  <Route path="/member/:profileId" element={<MemberProfile />} />
                   <Route path="/stats" element={<Stats />} />
                   <Route path="/shop" element={<Shop />} />
                   <Route path="/fan-portal" element={<FanPortal />} />

@@ -404,9 +404,9 @@ class PlayerModal extends Component {
 
     return (
       <div className="mt-6 flex flex-col sm:flex-row gap-3">
-        {/* View Profile Button - Always shown for real players */}
+        {/* View Profile Button - Always shown for real players/members */}
         <Link
-          to={`/player/${player.id}`}
+          to={player.isOwner ? `/member/${player.id}` : `/player/${player.id}`}
           onClick={onClose}
           className="flex-1 py-3 px-6 bg-accent-gold text-black font-bold rounded-lg text-center hover:bg-accent-gold/90 transition-colors"
         >
