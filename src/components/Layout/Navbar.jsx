@@ -572,10 +572,25 @@ class Navbar extends Component {
                     to="/profile"
                     className="flex items-center space-x-2 text-white/80 hover:text-white transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center">
-                      <span className="text-sm font-medium text-black">
-                        {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
+                    <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center overflow-hidden relative ring-2 ring-accent-gold/40 hover:ring-accent-gold transition-all">
+                      {user.user_metadata?.avatar_url ? (
+                        <>
+                          <img
+                            src={user.user_metadata.avatar_url}
+                            alt="Profile"
+                            className="w-full h-full object-cover"
+                          />
+                          <img
+                            src={`${import.meta.env.BASE_URL}kaboona-logo.png`}
+                            alt=""
+                            className="absolute bottom-0 right-0 w-3.5 h-3.5 object-contain opacity-40 drop-shadow-sm"
+                          />
+                        </>
+                      ) : (
+                        <span className="text-sm font-medium text-black">
+                          {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                      )}
                     </div>
                   </Link>
                   <motion.button
@@ -694,10 +709,25 @@ class Navbar extends Component {
                         onClick={this.closeMobileMenu}
                         className="flex items-center space-x-3 px-4 py-3 text-white/80 hover:text-white transition-colors"
                       >
-                        <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center">
-                          <span className="text-sm font-medium text-black">
-                            {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
-                          </span>
+                        <div className="w-8 h-8 rounded-full bg-accent-gold flex items-center justify-center overflow-hidden relative ring-2 ring-accent-gold/40">
+                          {user.user_metadata?.avatar_url ? (
+                            <>
+                              <img
+                                src={user.user_metadata.avatar_url}
+                                alt="Profile"
+                                className="w-full h-full object-cover"
+                              />
+                              <img
+                                src={`${import.meta.env.BASE_URL}kaboona-logo.png`}
+                                alt=""
+                                className="absolute bottom-0 right-0 w-3.5 h-3.5 object-contain opacity-40 drop-shadow-sm"
+                              />
+                            </>
+                          ) : (
+                            <span className="text-sm font-medium text-black">
+                              {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)?.toUpperCase() || 'U'}
+                            </span>
+                          )}
                         </div>
                         <span>Profile</span>
                       </Link>
