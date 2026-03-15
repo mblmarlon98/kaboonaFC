@@ -484,6 +484,221 @@ export const getPositionBreakdown = async (eventType, eventId) => {
   return breakdown;
 };
 
+// ─── New Player Auto-Invite ──────────────────────────────────────────
+
+/**
+ * Auto-invite a newly registered player to all upcoming scheduled events.
+ * Creates pending invitations and sends immediate notifications for
+ * any events happening within 24 hours.
+ * @param {string} userId - The new player's user ID
+ */
+export const autoInviteNewPlayer = async (userId) => {
+  const today = new Date().toISOString().split('T')[0];
+  const now = new Date();
+
+  // Fetch upcoming trainings and matches in parallel
+  const [{ data: trainings }, { data: matches }] = await Promise.all([
+    supabase
+      .from('training_sessions')
+      .select('id, session_date, session_time')
+      .eq('status', 'scheduled')
+      .gte('session_date', today),
+    supabase
+      .from('matches')
+      .select('id, opponent, match_date, match_time')
+      .eq('status', 'scheduled')
+      .gte('match_date', today),
+  ]);
+
+  const invitationRows = [];
+  const immediateNotifications = [];
+
+  // Create invitations for trainings
+  (trainings || []).forEach((t) => {
+    invitationRows.push({
+      event_type: 'training',
+      event_id: t.id,
+      player_id: userId,
+      status: 'pending',
+    });
+
+    const eventDateTime = new Date(`${t.session_date}T${t.session_time || '00:00:00'}`);
+    const hoursUntil = (eventDateTime - now) / (1000 * 60 * 60);
+
+    if (hoursUntil > 0 && hoursUntil <= 24) {
+      immediateNotifications.push({
+        user_id: userId,
+        title: 'Training Session Soon!',
+        body: `Training on ${t.session_date} at ${t.session_time} — happening within 24 hours!`,
+        type: 'match_reminder',
+        reference_type: 'training',
+        reference_id: t.id,
+      });
+    }
+  });
+
+  // Create invitations for matches
+  (matches || []).forEach((m) => {
+    invitationRows.push({
+      event_type: 'match',
+      event_id: m.id,
+      player_id: userId,
+      status: 'pending',
+    });
+
+    const eventDateTime = new Date(`${m.match_date}T${m.match_time || '00:00:00'}`);
+    const hoursUntil = (eventDateTime - now) / (1000 * 60 * 60);
+
+    if (hoursUntil > 0 && hoursUntil <= 24) {
+      immediateNotifications.push({
+        user_id: userId,
+        title: 'Match Day Approaching!',
+        body: `Match vs ${m.opponent || 'TBD'} on ${m.match_date} — happening within 24 hours!`,
+        type: 'match_reminder',
+        reference_type: 'match',
+        reference_id: m.id,
+      });
+    }
+  });
+
+  // Insert invitations
+  if (invitationRows.length > 0) {
+    await supabase.from('event_invitations').insert(invitationRows);
+  }
+
+  // Send immediate notifications for events within 24h
+  if (immediateNotifications.length > 0) {
+    await supabase.from('notifications').insert(immediateNotifications);
+  }
+
+  // Also send standard training/match invite notifications for ALL upcoming events
+  const standardNotifications = [];
+  (trainings || []).forEach((t) => {
+    standardNotifications.push({
+      user_id: userId,
+      title: 'Training Session Scheduled',
+      body: `Training on ${t.session_date} at ${t.session_time}`,
+      type: 'training_invite',
+      reference_type: 'training',
+      reference_id: t.id,
+    });
+  });
+  (matches || []).forEach((m) => {
+    standardNotifications.push({
+      user_id: userId,
+      title: 'Match Scheduled',
+      body: `Match vs ${m.opponent || 'TBD'} on ${m.match_date}`,
+      type: 'match_invite',
+      reference_type: 'match',
+      reference_id: m.id,
+    });
+  });
+
+  if (standardNotifications.length > 0) {
+    await supabase.from('notifications').insert(standardNotifications);
+  }
+};
+
+// ─── Upcoming Event Reminders ────────────────────────────────────────
+
+/**
+ * Check for upcoming events within 24 hours and send reminder
+ * notifications if they haven't been sent yet.
+ * Call this on app load / login for player users.
+ * @param {string} userId - The player's user ID
+ */
+export const checkUpcomingEventReminders = async (userId) => {
+  const now = new Date();
+
+  // Get the player's accepted invitations
+  const { data: invitations } = await supabase
+    .from('event_invitations')
+    .select('event_type, event_id')
+    .eq('player_id', userId)
+    .eq('status', 'accepted');
+
+  if (!invitations || invitations.length === 0) return;
+
+  const trainingIds = invitations.filter((i) => i.event_type === 'training').map((i) => i.event_id);
+  const matchIds = invitations.filter((i) => i.event_type === 'match').map((i) => i.event_id);
+
+  const pendingReminders = [];
+
+  // Check trainings within 24h
+  if (trainingIds.length > 0) {
+    const { data: trainings } = await supabase
+      .from('training_sessions')
+      .select('id, session_date, session_time')
+      .in('id', trainingIds)
+      .eq('status', 'scheduled');
+
+    (trainings || []).forEach((t) => {
+      const eventDateTime = new Date(`${t.session_date}T${t.session_time || '00:00:00'}`);
+      const hoursUntil = (eventDateTime - now) / (1000 * 60 * 60);
+
+      if (hoursUntil > 0 && hoursUntil <= 24) {
+        pendingReminders.push({
+          eventType: 'training',
+          eventId: t.id,
+          title: 'Training Tomorrow!',
+          body: `Training session on ${t.session_date} at ${t.session_time}`,
+        });
+      }
+    });
+  }
+
+  // Check matches within 24h
+  if (matchIds.length > 0) {
+    const { data: matches } = await supabase
+      .from('matches')
+      .select('id, opponent, match_date, match_time')
+      .in('id', matchIds)
+      .eq('status', 'scheduled');
+
+    (matches || []).forEach((m) => {
+      const eventDateTime = new Date(`${m.match_date}T${m.match_time || '00:00:00'}`);
+      const hoursUntil = (eventDateTime - now) / (1000 * 60 * 60);
+
+      if (hoursUntil > 0 && hoursUntil <= 24) {
+        pendingReminders.push({
+          eventType: 'match',
+          eventId: m.id,
+          title: 'Match Day Tomorrow!',
+          body: `Match vs ${m.opponent || 'TBD'} on ${m.match_date}`,
+        });
+      }
+    });
+  }
+
+  if (pendingReminders.length === 0) return;
+
+  // Check which reminders have already been sent (avoid duplicates)
+  const { data: existingReminders } = await supabase
+    .from('notifications')
+    .select('reference_id, reference_type')
+    .eq('user_id', userId)
+    .eq('type', 'match_reminder');
+
+  const existingSet = new Set(
+    (existingReminders || []).map((r) => `${r.reference_type}:${r.reference_id}`)
+  );
+
+  const newReminders = pendingReminders
+    .filter((r) => !existingSet.has(`${r.eventType}:${r.eventId}`))
+    .map((r) => ({
+      user_id: userId,
+      title: r.title,
+      body: r.body,
+      type: 'match_reminder',
+      reference_type: r.eventType,
+      reference_id: r.eventId,
+    }));
+
+  if (newReminders.length > 0) {
+    await supabase.from('notifications').insert(newReminders);
+  }
+};
+
 // ─── Players ─────────────────────────────────────────────────────────
 
 /**

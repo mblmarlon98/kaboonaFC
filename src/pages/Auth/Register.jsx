@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { signUp, signInWithOAuth } from '../../services/auth';
 import { supabase } from '../../services/supabase';
+import { autoInviteNewPlayer } from '../../services/schedulingService';
 import { setUser, setSession, setError } from '../../redux/slices/authSlice';
 import CountrySelect from '../../components/common/CountrySelect';
 
@@ -161,6 +162,13 @@ class Register extends Component {
             }
 
             const redirect = result.redirect || '/profile';
+
+            // Auto-invite new player to upcoming events (fire and forget)
+            if (result.roles && result.roles.includes('player')) {
+              autoInviteNewPlayer(data.user.id).catch((err) =>
+                console.warn('Auto-invite new player failed:', err)
+              );
+            }
 
             // Set redirect state FIRST, then dispatch user to Redux in callback
             this.setState({ isSubmitting: false, redirectTo: redirect }, () => {

@@ -24,6 +24,7 @@ import { onAuthStateChange, getSession, getCurrentUser } from './services/auth';
 import { setUser, setSession, setLoading } from './redux/slices/authSlice';
 import { setNotifications, addNotification, setUnreadCount } from './redux/slices/notificationSlice';
 import { getNotifications, getUnreadCount, subscribeToNotifications } from './services/notificationService';
+import { checkUpcomingEventReminders } from './services/schedulingService';
 
 // Placeholder pages
 const NotFound = () => <div className="min-h-screen flex items-center justify-center"><h1 className="text-4xl font-display">404 - Not Found</h1></div>;
@@ -86,6 +87,18 @@ class App extends Component {
     this.notificationChannel = subscribeToNotifications(user.id, (newNotification) => {
       addNotification(newNotification);
     });
+
+    // Check for upcoming event reminders (24h) for player users
+    const isPlayer =
+      user.isPlayer ||
+      (user.roles && user.roles.includes('player')) ||
+      user.role === 'player';
+
+    if (isPlayer) {
+      checkUpcomingEventReminders(user.id).catch((err) =>
+        console.warn('Reminder check failed:', err)
+      );
+    }
   };
 
   clearNotifications = () => {
