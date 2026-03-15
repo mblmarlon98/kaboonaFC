@@ -57,11 +57,20 @@ class OurTeam extends Component {
 
       const getImage = (p) => p.profile_image_url || playerImages[p.id] || null;
 
+      // Build a lookup from user_id to player record (for owners who are also players)
+      const allPlayers = playersResponse.data || [];
+      const playerByUserId = {};
+      allPlayers.forEach(p => { if (p.user_id) playerByUserId[p.user_id] = p; });
+
       // Find all owners (role-based from profiles)
       const ownerProfiles = staffProfiles.filter(p => (p.roles || []).includes('owner'));
-      const owners = ownerProfiles.map(p => ({
-        id: p.id, name: p.full_name, role: 'Owner', image: getImage(p),
-      }));
+      const owners = ownerProfiles.map(p => {
+        const playerRecord = playerByUserId[p.id] || null;
+        return {
+          id: p.id, name: p.full_name, role: 'Owner', image: getImage(p),
+          playerData: playerRecord, // full player record if owner is also a player
+        };
+      });
 
       // Find coaches
       const coachProfiles = staffProfiles.filter(p => (p.roles || []).includes('coach'));

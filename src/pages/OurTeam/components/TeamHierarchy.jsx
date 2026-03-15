@@ -27,14 +27,19 @@ class TeamHierarchy extends Component {
   handleOwnerClick = (owner) => {
     const { openPlayerModal } = this.context || {};
     if (openPlayerModal) {
-      // Convert owner to player-like format for modal
-      const ownerAsPlayer = {
-        ...owner,
-        position: 'Owner',
-        number: '',
-        isOwner: true,
-      };
-      openPlayerModal(ownerAsPlayer);
+      if (owner.playerData) {
+        // Owner is also a player — show full player data with real stats
+        openPlayerModal(owner.playerData);
+      } else {
+        // Owner-only — show owner card without stats
+        const ownerAsPlayer = {
+          ...owner,
+          position: 'Owner',
+          number: '',
+          isOwner: true,
+        };
+        openPlayerModal(ownerAsPlayer);
+      }
     }
   };
 
