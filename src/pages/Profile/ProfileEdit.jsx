@@ -340,6 +340,7 @@ class ProfileEdit extends Component {
         .update({
           full_name: formData.name,
           profile_image_url: avatarUrl,
+          nationality: formData.country || null,
         })
         .eq('id', user.id);
 

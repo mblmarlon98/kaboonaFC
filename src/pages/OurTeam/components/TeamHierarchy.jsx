@@ -69,6 +69,18 @@ class TeamHierarchy extends Component {
               background: 'linear-gradient(135deg, #F5F5DC 0%, #E8E4C9 25%, #FFFEF0 50%, #E8E4C9 75%, #F5F5DC 100%)',
             }}
           >
+            {/* Crown Icon — outside overflow-hidden so it isn't clipped */}
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
+              <div
+                className="w-12 h-12 flex items-center justify-center rounded-full shadow-lg"
+                style={{ background: 'linear-gradient(135deg, #F5F5DC 0%, #E8E4C9 100%)' }}
+              >
+                <svg className="w-7 h-7 text-surface-dark" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M2.5 19h19v2h-19v-2zm1.75-6.5l3.75 3.75L12 12l4 4.25 3.75-3.75L21 15l-1.5 3h-15L3 15l1.25-2.5zM12 2l4.5 7.5H7.5L12 2z" />
+                </svg>
+              </div>
+            </div>
+
             <div className="bg-surface-dark-elevated rounded-xl overflow-hidden relative">
               {/* Decorative Icon Pattern */}
               <svg
@@ -88,18 +100,6 @@ class TeamHierarchy extends Component {
                 <circle cx="10" cy="10" r="8" fill="none" stroke="url(#ownerGradient)" strokeWidth="0.3" />
                 <circle cx="90" cy="10" r="8" fill="none" stroke="url(#ownerGradient)" strokeWidth="0.3" />
               </svg>
-
-              {/* Crown Icon */}
-              <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-10">
-                <div
-                  className="w-12 h-12 flex items-center justify-center rounded-full shadow-lg"
-                  style={{ background: 'linear-gradient(135deg, #F5F5DC 0%, #E8E4C9 100%)' }}
-                >
-                  <svg className="w-7 h-7 text-surface-dark" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M2.5 19h19v2h-19v-2zm1.75-6.5l3.75 3.75L12 12l4 4.25 3.75-3.75L21 15l-1.5 3h-15L3 15l1.25-2.5zM12 2l4.5 7.5H7.5L12 2z" />
-                  </svg>
-                </div>
-              </div>
 
               {/* Content */}
               <div className="pt-8 pb-6 px-6 text-center relative">
