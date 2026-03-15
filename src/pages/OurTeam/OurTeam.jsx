@@ -44,15 +44,28 @@ class OurTeam extends Component {
       // Build hierarchy from real roles
       const staffProfiles = staffResponse.data || [];
 
+      // Build player image lookup as fallback for staff without profile images
+      const staffIds = staffProfiles.map(p => p.id);
+      let playerImages = {};
+      if (staffIds.length > 0) {
+        const { data: playerImgs } = await supabase
+          .from('players')
+          .select('user_id, image')
+          .in('user_id', staffIds);
+        (playerImgs || []).forEach(p => { if (p.image) playerImages[p.user_id] = p.image; });
+      }
+
+      const getImage = (p) => p.profile_image_url || playerImages[p.id] || null;
+
       // Find all owners (role-based from profiles)
       const ownerProfiles = staffProfiles.filter(p => (p.roles || []).includes('owner'));
       const owners = ownerProfiles.map(p => ({
-        id: p.id, name: p.full_name, role: 'Owner', image: p.profile_image_url,
+        id: p.id, name: p.full_name, role: 'Owner', image: getImage(p),
       }));
 
       // Find coaches
       const coachProfiles = staffProfiles.filter(p => (p.roles || []).includes('coach'));
-      const coaches = coachProfiles.map(p => ({ id: p.id, name: p.full_name, role: 'Coach', image: p.profile_image_url }));
+      const coaches = coachProfiles.map(p => ({ id: p.id, name: p.full_name, role: 'Coach', image: getImage(p) }));
 
       // Find managers (for hierarchy display)
       const managementProfiles = staffProfiles.filter(p =>
@@ -85,13 +98,13 @@ class OurTeam extends Component {
           id: p.id,
           name: p.full_name,
           role: 'Manager',
-          image: p.profile_image_url,
+          image: getImage(p),
         })),
         marketing: marketingProfiles.map(p => ({
           id: p.id,
           name: p.full_name,
           role: (p.roles || []).includes('marketing') ? 'Marketing' : 'Content Manager',
-          image: p.profile_image_url,
+          image: getImage(p),
         })),
         players: activePlayers,
         alumni: alumniPlayers,

@@ -74,6 +74,17 @@ class TeamPreviewSection extends Component {
         console.warn('Could not fetch staff profiles:', error);
       }
 
+      // Also fetch player images as fallback
+      const staffIds = (data || []).map(p => p.id);
+      let playerImages = {};
+      if (staffIds.length > 0) {
+        const { data: players } = await supabase
+          .from('players')
+          .select('user_id, image')
+          .in('user_id', staffIds);
+        (players || []).forEach(p => { if (p.image) playerImages[p.user_id] = p.image; });
+      }
+
       const staffRoles = ['owner', 'manager', 'coach'];
       const rolePriority = { owner: 0, manager: 1, coach: 2 };
 
@@ -89,7 +100,7 @@ class TeamPreviewSection extends Component {
             name: p.full_name || 'Staff Member',
             role: ROLE_DISPLAY[bestRole]?.label || bestRole,
             roleKey: bestRole,
-            image_url: p.profile_image_url,
+            image_url: p.profile_image_url || playerImages[p.id] || null,
           };
         })
         .sort((a, b) => (rolePriority[a.roleKey] ?? 99) - (rolePriority[b.roleKey] ?? 99));
