@@ -34,6 +34,14 @@ function getNotificationTypeIcon(type) {
       return { color: 'text-purple-400', bg: 'bg-purple-400/10', label: 'Request' };
     case 'player_declined':
       return { color: 'text-red-400', bg: 'bg-red-400/10', label: 'Declined' };
+    case 'injury_reported':
+      return { color: 'text-red-400', bg: 'bg-red-400/10', label: 'Injury' };
+    case 'note_created':
+      return { color: 'text-cyan-400', bg: 'bg-cyan-400/10', label: 'Note' };
+    case 'starting_11':
+      return { color: 'text-accent-gold', bg: 'bg-accent-gold/10', label: 'Starting XI' };
+    case 'event_cancellation':
+      return { color: 'text-red-400', bg: 'bg-red-400/10', label: 'Cancelled' };
     default:
       return { color: 'text-gray-400', bg: 'bg-gray-400/10', label: 'General' };
   }

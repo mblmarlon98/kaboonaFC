@@ -254,7 +254,7 @@ export const sendInvitations = async (eventType, eventId, playerIds) => {
   await createBulkNotifications(healthyPlayerIds, {
     title: notificationTitle,
     body: notificationBody,
-    type: 'event_invitation',
+    type: eventType === 'training' ? 'training_invite' : 'match_invite',
     referenceType: eventType,
     referenceId: eventId,
   });
