@@ -37,7 +37,7 @@ class OurTeam extends Component {
         supabase
           .from('profiles')
           .select('id, full_name, role, roles, profile_image_url')
-          .or('roles.cs.{owner},roles.cs.{coach},roles.cs.{manager},roles.cs.{admin},roles.cs.{editor},roles.cs.{marketing}'),
+          .or('roles.cs.{owner},roles.cs.{coach},roles.cs.{manager},roles.cs.{editor},roles.cs.{marketing}'),
         supabase.from('players_with_profiles').select('*').order('number', { ascending: true }),
       ]);
 
@@ -54,9 +54,9 @@ class OurTeam extends Component {
       const coachProfiles = staffProfiles.filter(p => (p.roles || []).includes('coach'));
       const coaches = coachProfiles.map(p => ({ id: p.id, name: p.full_name, role: 'Coach', image: p.profile_image_url }));
 
-      // Find managers/admins (for hierarchy display)
+      // Find managers (for hierarchy display)
       const managementProfiles = staffProfiles.filter(p =>
-        ((p.roles || []).includes('admin') || (p.roles || []).includes('manager')) &&
+        (p.roles || []).includes('manager') &&
         !(p.roles || []).includes('owner') &&
         !(p.roles || []).includes('coach')
       );
@@ -84,7 +84,7 @@ class OurTeam extends Component {
         management: managementProfiles.map(p => ({
           id: p.id,
           name: p.full_name,
-          role: (p.roles || []).includes('admin') ? 'Admin' : 'Manager',
+          role: 'Manager',
           image: p.profile_image_url,
         })),
         marketing: marketingProfiles.map(p => ({
