@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 
 /**
  * Merchandise card for Kaboona FC products
- * Includes size selector and add to cart functionality
+ * Includes size selector, jersey customization (number + name), and add to cart
  */
 class MerchCard extends Component {
   constructor(props) {
@@ -14,6 +14,8 @@ class MerchCard extends Component {
       imageLoaded: false,
       imageError: false,
       showSizeError: false,
+      jerseyNumber: '',
+      jerseyName: '',
     };
   }
 
@@ -37,9 +39,19 @@ class MerchCard extends Component {
     this.setState({ selectedSize: size, showSizeError: false });
   };
 
+  handleJerseyNumberChange = (e) => {
+    const val = e.target.value.replace(/\D/g, '').slice(0, 2);
+    this.setState({ jerseyNumber: val });
+  };
+
+  handleJerseyNameChange = (e) => {
+    const val = e.target.value.toUpperCase().slice(0, 15);
+    this.setState({ jerseyName: val });
+  };
+
   handleAddToCart = () => {
     const { product, onAddToCart } = this.props;
-    const { selectedSize } = this.state;
+    const { selectedSize, jerseyNumber, jerseyName } = this.state;
 
     if (!selectedSize) {
       this.setState({ showSizeError: true });
@@ -49,16 +61,19 @@ class MerchCard extends Component {
     onAddToCart({
       ...product,
       size: selectedSize,
+      jerseyNumber: jerseyNumber || null,
+      jerseyName: jerseyName || null,
     });
 
-    // Reset selection after adding
-    this.setState({ selectedSize: null });
+    this.setState({ selectedSize: null, jerseyNumber: '', jerseyName: '' });
   };
 
   render() {
     const { product, index = 0 } = this.props;
-    const { isHovered, selectedSize, imageLoaded, imageError, showSizeError } = this.state;
-    const { name, price, image, sizes, category, badge } = product;
+    const { isHovered, selectedSize, imageLoaded, imageError, showSizeError, jerseyNumber, jerseyName } = this.state;
+    const { name, price, currency, image, sizes, category, badge, customizable } = product;
+
+    const currencySymbol = currency === 'RM' ? 'RM' : '$';
 
     return (
       <motion.div
@@ -138,7 +153,7 @@ class MerchCard extends Component {
 
             {/* Price */}
             <p className="mt-2 text-2xl font-display font-bold text-accent-gold">
-              ${price.toFixed(2)}
+              {currencySymbol} {price.toFixed(2)}
             </p>
 
             {/* Size Selector */}
@@ -173,6 +188,38 @@ class MerchCard extends Component {
                       {size}
                     </button>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Jersey Customization */}
+            {customizable && (
+              <div className="mt-4 space-y-3">
+                <span className="text-sm text-gray-400">Customize Your Jersey</span>
+                <div className="flex gap-3">
+                  <div className="w-20">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="#"
+                      value={jerseyNumber}
+                      onChange={this.handleJerseyNumberChange}
+                      maxLength={2}
+                      className="w-full px-3 py-2 bg-surface-dark-hover border border-gray-700 rounded-lg text-white text-center text-lg font-bold placeholder-gray-600 focus:outline-none focus:border-accent-gold transition-colors"
+                    />
+                    <span className="text-[10px] text-gray-500 mt-1 block text-center">Number</span>
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      placeholder="NAME ON JERSEY"
+                      value={jerseyName}
+                      onChange={this.handleJerseyNameChange}
+                      maxLength={15}
+                      className="w-full px-3 py-2 bg-surface-dark-hover border border-gray-700 rounded-lg text-white uppercase tracking-wider placeholder-gray-600 focus:outline-none focus:border-accent-gold transition-colors"
+                    />
+                    <span className="text-[10px] text-gray-500 mt-1 block">Name on back</span>
+                  </div>
                 </div>
               </div>
             )}

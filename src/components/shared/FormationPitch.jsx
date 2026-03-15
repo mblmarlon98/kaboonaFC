@@ -324,7 +324,13 @@ class FormationPitch extends Component {
               showStats={false}
               showSkillsAndWF={false}
             />
-            {!isCompatible && (
+            {isCompatible ? (
+              <div className="absolute -top-1 -left-1 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center z-10">
+                <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
               <div className="absolute -top-1 -left-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center z-10">
                 <span className="text-white text-[10px] font-bold">✕</span>
               </div>

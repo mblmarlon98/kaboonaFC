@@ -365,12 +365,12 @@ class PlayerFIFACard extends Component {
                 </div>
 
                 {/* Country flag */}
-                <div className="flex justify-center">
+                <div className="flex justify-center flex-shrink-0">
                   {country && (
                     <img
                       src={`https://flagcdn.com/w40/${country.toLowerCase()}.png`}
                       alt={country}
-                      className="w-5 h-3 md:w-6 md:h-4 object-cover rounded-sm shadow"
+                      className="w-5 h-3 md:w-6 md:h-4 object-cover rounded-sm shadow flex-shrink-0"
                       onError={(e) => { e.target.style.display = 'none'; }}
                     />
                   )}
@@ -529,10 +529,10 @@ class PlayerFIFACard extends Component {
                     </div>
                   )}
                 </div>
-                <div className="flex flex-col items-center gap-1">
+                <div className="flex flex-col items-center gap-1 flex-shrink-0">
                   {/* Country Flag */}
                   {country && (
-                    <div className={`${sizeClasses.flag} overflow-hidden rounded-sm shadow-md`}>
+                    <div className={`${sizeClasses.flag} overflow-hidden rounded-sm shadow-md flex-shrink-0`}>
                       <img
                         src={`https://flagcdn.com/w80/${country.toLowerCase()}.png`}
                         alt={country}

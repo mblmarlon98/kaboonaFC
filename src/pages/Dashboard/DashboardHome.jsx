@@ -2,7 +2,6 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { supabase } from '../../services/supabase';
-import Calendar from './components/Calendar';
 
 /**
  * DashboardHome
@@ -16,6 +15,8 @@ class DashboardHome extends Component {
       loading: true,
       stats: [],
       upcomingEvents: [],
+      pendingRequests: [],
+      acceptingAll: false,
     };
   }
 
@@ -81,11 +82,94 @@ class DashboardHome extends Component {
       await Promise.all([
         this.fetchStats(),
         this.fetchUpcomingEvents(),
+        this.fetchPendingRequests(),
       ]);
     } catch (err) {
       console.error('Error fetching dashboard home data:', err);
     } finally {
       this.setState({ loading: false });
+    }
+  };
+
+  fetchPendingRequests = async () => {
+    const { isAdmin } = this.getUserRoleFlags();
+    if (!isAdmin) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, profile_image_url, player_request_status, created_at')
+        .eq('player_request_status', 'pending')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      this.setState({ pendingRequests: data || [] });
+    } catch (err) {
+      console.error('Error fetching pending requests:', err);
+    }
+  };
+
+  handleAcceptRequest = async (profileId) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          player_request_status: 'approved',
+          roles: supabase.rpc ? undefined : undefined,
+        })
+        .eq('id', profileId);
+
+      if (error) throw error;
+
+      // Add player role
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('roles')
+        .eq('id', profileId)
+        .single();
+
+      if (profile) {
+        const updatedRoles = [...new Set([...(profile.roles || []), 'player'])];
+        await supabase.from('profiles').update({ roles: updatedRoles, player_request_status: 'approved' }).eq('id', profileId);
+      }
+
+      this.setState((prev) => ({
+        pendingRequests: prev.pendingRequests.filter((r) => r.id !== profileId),
+      }));
+    } catch (err) {
+      console.error('Error accepting request:', err);
+    }
+  };
+
+  handleAcceptAll = async () => {
+    const { pendingRequests } = this.state;
+    if (!pendingRequests || pendingRequests.length === 0) return;
+
+    this.setState({ acceptingAll: true });
+    try {
+      for (const req of pendingRequests) {
+        await this.handleAcceptRequest(req.id);
+      }
+    } catch (err) {
+      console.error('Error accepting all requests:', err);
+    } finally {
+      this.setState({ acceptingAll: false });
+      this.fetchPendingRequests();
+    }
+  };
+
+  handleRejectRequest = async (profileId) => {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ player_request_status: 'rejected' })
+        .eq('id', profileId);
+
+      this.setState((prev) => ({
+        pendingRequests: prev.pendingRequests.filter((r) => r.id !== profileId),
+      }));
+    } catch (err) {
+      console.error('Error rejecting request:', err);
     }
   };
 
@@ -364,7 +448,8 @@ class DashboardHome extends Component {
 
   render() {
     const { user } = this.props;
-    const { loading, stats, upcomingEvents } = this.state;
+    const { loading, stats, pendingRequests, acceptingAll } = this.state;
+    const { isAdmin } = this.getUserRoleFlags();
 
     if (loading) {
       return this.renderLoadingState();
@@ -417,19 +502,86 @@ class DashboardHome extends Component {
           </div>
         )}
 
-        {/* Calendar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <Calendar
-            userRoles={user?.roles || (user?.role ? [user.role] : [])}
-            user={user}
-            readOnly={false}
-            defaultViewMode="month"
-          />
-        </motion.div>
+        {/* Pending Player Requests */}
+        {isAdmin && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="bg-surface-dark-elevated rounded-xl border border-white/10 overflow-hidden"
+          >
+            <div className="flex items-center justify-between p-5 border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-400/20">
+                  <svg className="w-5 h-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold">Pending Requests</h3>
+                  <p className="text-white/40 text-xs">{pendingRequests.length} player request{pendingRequests.length !== 1 ? 's' : ''} awaiting approval</p>
+                </div>
+              </div>
+              {pendingRequests.length > 1 && (
+                <button
+                  onClick={this.handleAcceptAll}
+                  disabled={acceptingAll}
+                  className="px-4 py-2 bg-green-500/20 text-green-400 text-sm font-semibold rounded-lg hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                >
+                  {acceptingAll ? 'Accepting...' : 'Accept All'}
+                </button>
+              )}
+            </div>
+
+            {pendingRequests.length === 0 ? (
+              <div className="p-8 text-center">
+                <p className="text-white/30 text-sm">No pending requests</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-white/5">
+                {pendingRequests.map((req) => (
+                  <div key={req.id} className="flex items-center justify-between p-4 hover:bg-white/5 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex-shrink-0">
+                        {req.profile_image_url ? (
+                          <img src={req.profile_image_url} alt={req.full_name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-white/40 font-bold">
+                            {(req.full_name || '?').charAt(0)}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-white text-sm font-medium">{req.full_name || 'Unknown'}</p>
+                        <p className="text-white/40 text-xs">{req.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => this.handleAcceptRequest(req.id)}
+                        className="p-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+                        title="Accept"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => this.handleRejectRequest(req.id)}
+                        className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30 transition-colors"
+                        title="Reject"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
       </div>
     );
   }

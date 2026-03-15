@@ -14,7 +14,7 @@ class OurTeam extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      owner: null,
+      owners: [],
       coaches: [],
       management: [],
       marketing: [],
@@ -44,11 +44,11 @@ class OurTeam extends Component {
       // Build hierarchy from real roles
       const staffProfiles = staffResponse.data || [];
 
-      // Find owner (role-based from profiles)
-      const ownerProfile = staffProfiles.find(p => (p.roles || []).includes('owner'));
-      const owner = ownerProfile
-        ? { id: ownerProfile.id, name: ownerProfile.full_name, role: 'Owner', image: ownerProfile.profile_image_url }
-        : null;
+      // Find all owners (role-based from profiles)
+      const ownerProfiles = staffProfiles.filter(p => (p.roles || []).includes('owner'));
+      const owners = ownerProfiles.map(p => ({
+        id: p.id, name: p.full_name, role: 'Owner', image: p.profile_image_url,
+      }));
 
       // Find coaches
       const coachProfiles = staffProfiles.filter(p => (p.roles || []).includes('coach'));
@@ -79,7 +79,7 @@ class OurTeam extends Component {
         : [];
 
       this.setState({
-        owner,
+        owners,
         coaches,
         management: managementProfiles.map(p => ({
           id: p.id,
@@ -100,7 +100,7 @@ class OurTeam extends Component {
     } catch (error) {
       console.error('Error fetching team data:', error);
       this.setState({
-        owner: null,
+        owners: [],
         coaches: [],
         management: [],
         marketing: [],
@@ -114,7 +114,7 @@ class OurTeam extends Component {
 
   render() {
     const {
-      owner,
+      owners,
       coaches,
       management,
       marketing,
@@ -126,11 +126,7 @@ class OurTeam extends Component {
     if (isLoading) {
       return (
         <div className="min-h-screen bg-surface-dark flex items-center justify-center">
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-            className="w-16 h-16 border-4 border-accent-gold border-t-transparent rounded-full"
-          />
+          <div className="w-16 h-16 border-4 border-accent-gold border-t-transparent rounded-full animate-spin" />
         </div>
       );
     }
@@ -174,7 +170,7 @@ class OurTeam extends Component {
         </section>
 
         {/* Team Hierarchy - Owner & Coaches */}
-        <TeamHierarchy owner={owner} coaches={coaches} management={management || []} marketing={marketing || []} />
+        <TeamHierarchy owners={owners} coaches={coaches} management={management || []} marketing={marketing || []} />
 
         {/* Squad Overview - Players by Position */}
         <SquadOverview players={players} />

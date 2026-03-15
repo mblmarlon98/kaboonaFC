@@ -190,170 +190,25 @@ const GEAR_CATEGORIES = [
 ];
 
 /**
- * Mock merchandise data for Kaboona FC
+ * Official Kaboona FC merchandise
  */
 const MERCHANDISE = [
-  // Jerseys
   {
-    id: 'jersey-1',
-    name: 'Kaboona FC Home Jersey 2024/25',
+    id: 'jersey-home',
+    name: 'Kaboona FC Home Jersey 2025/26',
     category: 'jerseys',
-    price: 89.99,
-    image: 'https://images.unsplash.com/photo-1577212017184-80cc0da11082?w=400&h=400&fit=crop',
+    price: 60,
+    currency: 'RM',
+    image: '/shop/home-jersey.jpg',
     sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    badge: 'New Season',
-  },
-  {
-    id: 'jersey-2',
-    name: 'Kaboona FC Away Jersey 2024/25',
-    category: 'jerseys',
-    price: 89.99,
-    image: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    badge: 'New Season',
-  },
-  {
-    id: 'jersey-3',
-    name: 'Kaboona FC Third Jersey 2024/25',
-    category: 'jerseys',
-    price: 89.99,
-    image: 'https://images.unsplash.com/photo-1598971457999-ca4ef48a9a71?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    badge: 'Limited Edition',
-  },
-  {
-    id: 'jersey-4',
-    name: 'Kaboona FC Goalkeeper Jersey',
-    category: 'jerseys',
-    price: 79.99,
-    image: 'https://images.unsplash.com/photo-1517466787929-bc90951d0974?w=400&h=400&fit=crop',
-    sizes: ['S', 'M', 'L', 'XL'],
-  },
-  {
-    id: 'jersey-5',
-    name: 'Kaboona FC Retro Jersey 2019',
-    category: 'jerseys',
-    price: 69.99,
-    image: 'https://images.unsplash.com/photo-1551854838-212c50b4c184?w=400&h=400&fit=crop',
-    sizes: ['S', 'M', 'L', 'XL'],
-    badge: 'Classic',
-  },
-  // Training Kit
-  {
-    id: 'merch-training-1',
-    name: 'Kaboona FC Training Jersey',
-    category: 'training',
-    price: 54.99,
-    image: 'https://images.unsplash.com/photo-1580087256394-dc596e1c8f4f?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  },
-  {
-    id: 'merch-training-2',
-    name: 'Kaboona FC Training Pants',
-    category: 'training',
-    price: 49.99,
-    image: 'https://images.unsplash.com/photo-1584464491033-06628f3a6b7b?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  },
-  {
-    id: 'merch-training-3',
-    name: 'Kaboona FC Tracksuit Jacket',
-    category: 'training',
-    price: 74.99,
-    image: 'https://images.unsplash.com/photo-1542327897-d73f4005b533?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL'],
-  },
-  {
-    id: 'merch-training-4',
-    name: 'Kaboona FC Rain Jacket',
-    category: 'training',
-    price: 64.99,
-    image: 'https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=400&h=400&fit=crop',
-    sizes: ['S', 'M', 'L', 'XL'],
-  },
-  // Shorts
-  {
-    id: 'shorts-1',
-    name: 'Kaboona FC Home Shorts',
-    category: 'shorts',
-    price: 39.99,
-    image: 'https://images.unsplash.com/photo-1591195853828-11db59a44f6b?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  },
-  {
-    id: 'shorts-2',
-    name: 'Kaboona FC Away Shorts',
-    category: 'shorts',
-    price: 39.99,
-    image: 'https://images.unsplash.com/photo-1562183241-b937e95585b6?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  },
-  {
-    id: 'shorts-3',
-    name: 'Kaboona FC Training Shorts',
-    category: 'shorts',
-    price: 34.99,
-    image: 'https://images.unsplash.com/photo-1584466977773-e625c37cdd50?w=400&h=400&fit=crop',
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-  },
-  // Accessories
-  {
-    id: 'merch-acc-1',
-    name: 'Kaboona FC Snapback Cap',
-    category: 'accessories',
-    price: 29.99,
-    image: 'https://images.unsplash.com/photo-1588850561407-ed78c282e89b?w=400&h=400&fit=crop',
-    sizes: ['One Size'],
-    badge: 'Best Seller',
-  },
-  {
-    id: 'merch-acc-2',
-    name: 'Kaboona FC Beanie',
-    category: 'accessories',
-    price: 24.99,
-    image: 'https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=400&h=400&fit=crop',
-    sizes: ['One Size'],
-  },
-  {
-    id: 'merch-acc-3',
-    name: 'Kaboona FC Scarf',
-    category: 'accessories',
-    price: 19.99,
-    image: 'https://images.unsplash.com/photo-1520903920243-00d872a2d1c9?w=400&h=400&fit=crop',
-    sizes: ['One Size'],
-  },
-  {
-    id: 'merch-acc-4',
-    name: 'Kaboona FC Gym Bag',
-    category: 'accessories',
-    price: 44.99,
-    image: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=400&h=400&fit=crop',
-    sizes: ['One Size'],
-  },
-  {
-    id: 'merch-acc-5',
-    name: 'Kaboona FC Water Bottle',
-    category: 'accessories',
-    price: 14.99,
-    image: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=400&h=400&fit=crop',
-    sizes: ['One Size'],
-  },
-  {
-    id: 'merch-acc-6',
-    name: 'Kaboona FC Phone Case',
-    category: 'accessories',
-    price: 19.99,
-    image: 'https://images.unsplash.com/photo-1601593346740-925612772716?w=400&h=400&fit=crop',
-    sizes: ['iPhone 14', 'iPhone 15', 'Samsung S24'],
+    badge: 'Official',
+    customizable: true,
   },
 ];
 
 const MERCH_CATEGORIES = [
   { id: 'all', name: 'All Products', icon: '🛍️' },
   { id: 'jerseys', name: 'Jerseys', icon: '👕' },
-  { id: 'training', name: 'Training Kit', icon: '🏃' },
-  { id: 'shorts', name: 'Shorts', icon: '🩳' },
-  { id: 'accessories', name: 'Accessories', icon: '🎒' },
 ];
 
 /**
@@ -429,9 +284,13 @@ class Shop extends Component {
     const { addItem } = this.props;
     addItem(product);
 
+    const customNote = product.jerseyName || product.jerseyNumber
+      ? ` (#${product.jerseyNumber || '-'} ${product.jerseyName || ''})`
+      : '';
+
     this.setState({
       notification: {
-        message: `${product.name} (${product.size}) added to cart`,
+        message: `${product.name} (${product.size})${customNote} added to cart`,
         type: 'success',
       },
     });
@@ -621,98 +480,9 @@ class Shop extends Component {
         {/* ===== MERCH SECTION ===== */}
         {activeSection === 'merch' && (
           <>
-            {/* Merch Search + Category Filters */}
-            <section className="pt-8 px-4 sm:px-6 lg:px-8">
-              <div className="max-w-7xl mx-auto">
-                {/* Search Bar */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="max-w-xl mx-auto"
-                >
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Search merchandise..."
-                      value={merchSearch}
-                      onChange={this.handleMerchSearchChange}
-                      className="w-full px-6 py-4 pl-14 bg-surface-dark-elevated border border-gray-700 rounded-xl
-                               text-white placeholder-gray-500 focus:outline-none focus:border-accent-gold
-                               transition-colors duration-300"
-                    />
-                    <svg
-                      className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                      />
-                    </svg>
-                  </div>
-                </motion.div>
-
-                {/* Category Filters */}
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.1, duration: 0.5 }}
-                  className="mt-8 flex flex-wrap gap-3 justify-center"
-                >
-                  {MERCH_CATEGORIES.map((category, index) => {
-                    const isActive = merchCategory === category.id;
-
-                    return (
-                      <motion.button
-                        key={category.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 + index * 0.1, duration: 0.3 }}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => this.handleMerchCategoryChange(category.id)}
-                        className={`
-                          px-6 py-3 rounded-lg font-medium transition-all duration-300
-                          ${
-                            isActive
-                              ? 'bg-accent-gold text-black shadow-[0_0_20px_rgba(212,175,55,0.4)]'
-                              : 'bg-surface-dark-elevated text-gray-300 hover:bg-surface-dark-hover hover:text-white border border-gray-700 hover:border-accent-gold/50'
-                          }
-                        `}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className="text-lg">{category.icon}</span>
-                          {category.name}
-                        </span>
-                      </motion.button>
-                    );
-                  })}
-                </motion.div>
-              </div>
-            </section>
-
             {/* Merch Products Grid */}
             <section className="py-16 px-4 sm:px-6 lg:px-8">
-              <div className="max-w-7xl mx-auto">
-                {/* Results Count */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="mb-8 text-gray-400"
-                >
-                  Showing <span className="text-accent-gold font-semibold">{filteredMerch.length}</span> products
-                  {merchCategory !== 'all' && (
-                    <span>
-                      {' '}in <span className="text-white">{MERCH_CATEGORIES.find((c) => c.id === merchCategory)?.name}</span>
-                    </span>
-                  )}
-                </motion.div>
-
+              <div className="max-w-4xl mx-auto">
                 {/* Products Grid */}
                 <AnimatePresence mode="wait">
                   {filteredMerch.length > 0 ? (
@@ -721,7 +491,7 @@ class Shop extends Component {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-8 max-w-2xl mx-auto"
                     >
                       {filteredMerch.map((product, index) => (
                         <MerchCard

@@ -4,20 +4,35 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const SPONSORS = [
-  {
-    name: 'World Wide AudioGuide',
-    preview: '/sponsors/audioguide-og.jpg',
-    url: 'https://www.worldwideaudioguide.com',
-    tier: 'gold',
-  },
-  {
-    name: 'MBL — Marlon Berdefy',
-    preview: '/sponsors/mblmarlon-og.jpg',
-    url: 'https://mblmarlon.com',
-    tier: 'silver',
-  },
-];
+const SPONSORS = {
+  gold: [
+    {
+      name: 'World Wide AudioGuide',
+      preview: '/sponsors/audioguide-og.jpg',
+      url: 'https://www.worldwideaudioguide.com',
+    },
+  ],
+  silver: [
+    {
+      name: 'MBL — Marlon Berdefy',
+      preview: '/sponsors/mblmarlon-og.jpg',
+      url: 'https://mblmarlon.com',
+    },
+  ],
+  bronze: [
+    {
+      name: 'MBL',
+      logo: '/sponsors/mbl-logo.png',
+      url: 'https://mblmarlon.com',
+    },
+  ],
+};
+
+const TIER_CONFIG = {
+  gold: { label: 'Gold Sponsor', color: '#D4AF37' },
+  silver: { label: 'Silver Sponsor', color: '#C0C0C0' },
+  bronze: { label: 'Bronze Sponsor', color: '#CD7F32' },
+};
 
 class SponsorsSection extends Component {
   constructor(props) {
@@ -50,35 +65,42 @@ class SponsorsSection extends Component {
     ScrollTrigger.getAll().forEach((t) => t.kill());
   }
 
-  renderSponsorCard = (sponsor, index) => {
+  renderTierBadge = (tier) => {
+    const config = TIER_CONFIG[tier];
+    return (
+      <div className="absolute top-4 right-4 z-20">
+        <span
+          className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full"
+          style={{
+            background: `${config.color}20`,
+            color: config.color,
+            border: `1px solid ${config.color}40`,
+          }}
+        >
+          {config.label}
+        </span>
+      </div>
+    );
+  };
+
+  renderGoldSponsor = (sponsor, index) => {
     return (
       <a
-        key={index}
+        key={`gold-${index}`}
         href={sponsor.url}
         target="_blank"
         rel="noopener noreferrer"
         className="group block"
       >
-        <div className="relative rounded-2xl overflow-hidden transition-all duration-500"
+        <div
+          className="relative rounded-2xl overflow-hidden transition-all duration-500"
           style={{
-            background: 'linear-gradient(135deg, #0f0a1a 0%, #1a0f2e 50%, #0f0a1a 100%)',
-            border: '1px solid rgba(147, 51, 234, 0.2)',
+            background: 'linear-gradient(135deg, #0f0a1a 0%, #1a1005 50%, #0f0a1a 100%)',
+            border: '1px solid rgba(212, 175, 55, 0.3)',
           }}
         >
-          {/* Tier badge */}
-          <div className="absolute top-4 right-4 z-20">
-            <span className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full"
-              style={{
-                background: 'rgba(147, 51, 234, 0.2)',
-                color: '#a855f7',
-                border: '1px solid rgba(147, 51, 234, 0.3)',
-              }}
-            >
-              Gold Sponsor
-            </span>
-          </div>
+          {this.renderTierBadge('gold')}
 
-          {/* OG image — contains all branding */}
           <div className="relative w-full overflow-hidden rounded-2xl">
             <img
               src={sponsor.preview}
@@ -87,18 +109,17 @@ class SponsorsSection extends Component {
             />
           </div>
 
-          {/* Ambient purple glow on hover */}
+          {/* Gold glow on hover */}
           <div
             className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
             style={{
-              background: 'radial-gradient(ellipse at center, rgba(147,51,234,0.08) 0%, transparent 70%)',
+              background: 'radial-gradient(ellipse at center, rgba(212,175,55,0.08) 0%, transparent 70%)',
             }}
           />
-          {/* Border glow on hover */}
           <div
             className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
             style={{
-              boxShadow: '0 0 40px rgba(147, 51, 234, 0.15), inset 0 0 40px rgba(147, 51, 234, 0.05)',
+              boxShadow: '0 0 40px rgba(212, 175, 55, 0.15), inset 0 0 40px rgba(212, 175, 55, 0.05)',
             }}
           />
         </div>
@@ -106,7 +127,86 @@ class SponsorsSection extends Component {
     );
   };
 
+  renderSilverSponsor = (sponsor, index) => {
+    return (
+      <a
+        key={`silver-${index}`}
+        href={sponsor.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block"
+      >
+        <div
+          className="relative rounded-2xl overflow-hidden transition-all duration-500"
+          style={{
+            background: 'linear-gradient(135deg, #0f0a1a 0%, #151520 50%, #0f0a1a 100%)',
+            border: '1px solid rgba(192, 192, 192, 0.2)',
+          }}
+        >
+          {this.renderTierBadge('silver')}
+
+          <div className="relative w-full overflow-hidden rounded-2xl">
+            <img
+              src={sponsor.preview}
+              alt={`${sponsor.name} — app preview`}
+              className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+            />
+          </div>
+
+          {/* Silver glow on hover */}
+          <div
+            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse at center, rgba(192,192,192,0.06) 0%, transparent 70%)',
+            }}
+          />
+          <div
+            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+            style={{
+              boxShadow: '0 0 30px rgba(192, 192, 192, 0.1), inset 0 0 30px rgba(192, 192, 192, 0.03)',
+            }}
+          />
+        </div>
+      </a>
+    );
+  };
+
+  renderBronzeRow = (sponsors) => {
+    return (
+      <div className="flex items-center justify-center gap-6">
+        {/* Left line */}
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent to-white/10" />
+
+        {/* Logos */}
+        <div className="flex items-center gap-8">
+          {sponsors.map((sponsor, index) => (
+            <a
+              key={`bronze-${index}`}
+              href={sponsor.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group"
+            >
+              <img
+                src={sponsor.logo}
+                alt={sponsor.name}
+                className="h-8 w-auto opacity-40 group-hover:opacity-80 transition-opacity duration-300"
+              />
+            </a>
+          ))}
+        </div>
+
+        {/* Right line */}
+        <div className="flex-1 h-px bg-gradient-to-l from-transparent to-white/10" />
+      </div>
+    );
+  };
+
   render() {
+    const goldSponsors = SPONSORS.gold || [];
+    const silverSponsors = SPONSORS.silver || [];
+    const bronzeSponsors = SPONSORS.bronze || [];
+
     return (
       <section
         ref={this.sectionRef}
@@ -117,7 +217,7 @@ class SponsorsSection extends Component {
           <div
             className="w-full h-full"
             style={{
-              backgroundImage: 'radial-gradient(circle at 2px 2px, #9333ea 1px, transparent 1px)',
+              backgroundImage: 'radial-gradient(circle at 2px 2px, #D4AF37 1px, transparent 1px)',
               backgroundSize: '60px 60px',
             }}
           />
@@ -138,9 +238,34 @@ class SponsorsSection extends Component {
             <div className="w-24 h-1 bg-gradient-to-r from-transparent via-accent-gold to-transparent mx-auto mt-6" />
           </div>
 
-          {/* Sponsor cards */}
-          <div ref={this.cardsRef} className="space-y-6">
-            {SPONSORS.map((sponsor, i) => this.renderSponsorCard(sponsor, i))}
+          {/* Tiered sponsor display */}
+          <div ref={this.cardsRef} className="space-y-8">
+            {/* Gold Tier — full width */}
+            {goldSponsors.length > 0 && (
+              <div className="space-y-4">
+                {goldSponsors.map((s, i) => this.renderGoldSponsor(s, i))}
+              </div>
+            )}
+
+            {/* Silver Tier — 2-col grid, centered if only one */}
+            {silverSponsors.length > 0 && (
+              <div
+                className={`grid gap-4 ${
+                  silverSponsors.length === 1
+                    ? 'grid-cols-1 max-w-lg mx-auto'
+                    : 'grid-cols-1 md:grid-cols-2'
+                }`}
+              >
+                {silverSponsors.map((s, i) => this.renderSilverSponsor(s, i))}
+              </div>
+            )}
+
+            {/* Bronze Tier — clean logo with lines */}
+            {bronzeSponsors.length > 0 && (
+              <div className="pt-4">
+                {this.renderBronzeRow(bronzeSponsors)}
+              </div>
+            )}
           </div>
 
           {/* Become a sponsor CTA */}

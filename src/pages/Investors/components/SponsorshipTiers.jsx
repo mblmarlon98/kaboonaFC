@@ -14,10 +14,12 @@ const tiers = [
         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
       </svg>
     ),
+    sponsorDisplay: 'Logo displayed on website sponsors section',
     perks: [
       'Logo displayed on club website',
       'Mention in monthly newsletter',
       'Certificate of appreciation',
+      'Sponsor role badge on profile',
     ],
   },
   {
@@ -32,11 +34,14 @@ const tiers = [
         <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
       </svg>
     ),
+    sponsorDisplay: 'OG preview card in half-width grid',
     perks: [
       'All Bronze benefits',
+      'OG preview card on sponsors section',
       'Social media shoutout',
       'Logo on match day materials',
       'Quarterly progress reports',
+      'Monthly site traffic overview',
     ],
   },
   {
@@ -52,12 +57,15 @@ const tiers = [
       </svg>
     ),
     popular: true,
+    sponsorDisplay: 'Full-width OG preview card — premium placement',
     perks: [
       'All Silver benefits',
+      'Full-width premium card on sponsors section',
       'Small logo on team jersey',
       'Meet & greet with players',
       'Priority event invitations',
       '2 season passes',
+      'Full site traffic analytics dashboard',
     ],
   },
   {
@@ -79,6 +87,7 @@ const tiers = [
       'Private team dinner annually',
       '4 season passes',
       'Sponsor recognition speech',
+      'Real-time traffic analytics + conversion insights',
     ],
   },
 ];
@@ -102,7 +111,6 @@ class SponsorshipTiers extends Component {
 
   handleTierSelect = (tier) => {
     this.setState({ selectedTier: tier.id });
-    // In production, this would open a sponsorship form or contact modal
     if (this.props.onSelectTier) {
       this.props.onSelectTier(tier);
     }
@@ -167,6 +175,18 @@ class SponsorshipTiers extends Component {
                   <span className="text-white/60">/{tier.period}</span>
                 </div>
               </div>
+
+              {/* Website Placement */}
+              {tier.sponsorDisplay && (
+                <div className="px-6 pt-4">
+                  <div className="flex items-start gap-2 p-3 rounded-lg" style={{ background: `${tier.color}10`, border: `1px solid ${tier.color}20` }}>
+                    <svg className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: tier.color }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-xs text-white/60">{tier.sponsorDisplay}</span>
+                  </div>
+                </div>
+              )}
 
               {/* Perks */}
               <div className="p-6">

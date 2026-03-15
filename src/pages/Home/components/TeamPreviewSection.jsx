@@ -94,8 +94,13 @@ class TeamPreviewSection extends Component {
         })
         .sort((a, b) => (rolePriority[a.roleKey] ?? 99) - (rolePriority[b.roleKey] ?? 99));
 
-      // Show up to 3 staff members
-      this.setState({ staff: staffMembers.slice(0, 3), loading: false }, () => {
+      // Show all owners + up to remaining slots from other roles (total max 6)
+      const ownerMembers = staffMembers.filter((m) => m.roleKey === 'owner');
+      const otherMembers = staffMembers.filter((m) => m.roleKey !== 'owner');
+      const maxCards = 6;
+      const combined = [...ownerMembers, ...otherMembers].slice(0, maxCards);
+
+      this.setState({ staff: combined, loading: false }, () => {
         this.initScrollAnimation();
       });
     } catch (error) {

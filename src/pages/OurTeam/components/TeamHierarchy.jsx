@@ -333,7 +333,7 @@ class TeamHierarchy extends Component {
   };
 
   render() {
-    const { owner, coaches, management = [], marketing = [] } = this.props;
+    const { owners = [], coaches, management = [], marketing = [] } = this.props;
 
     return (
       <section className="py-16 px-4 relative bg-surface-dark">
@@ -362,14 +362,22 @@ class TeamHierarchy extends Component {
             <div className="w-24 h-1 bg-gradient-to-r from-transparent via-accent-gold to-transparent mx-auto" />
           </motion.div>
 
-          {!owner && coaches.length === 0 && (
+          {(!owners || owners.length === 0) && coaches.length === 0 && (
             <div className="text-center py-12">
               <p className="text-white/40">No staff data available yet</p>
             </div>
           )}
 
-          {/* Owner Card */}
-          {owner && this.renderOwnerCard(owner)}
+          {/* Owner Cards */}
+          {owners && owners.length > 0 && (
+            <div className={`flex justify-center gap-8 flex-wrap ${owners.length === 1 ? '' : 'max-w-3xl mx-auto'}`}>
+              {owners.map((owner) => (
+                <div key={owner.id} className={owners.length === 1 ? 'w-full' : 'w-full sm:w-auto sm:flex-1 max-w-md'}>
+                  {this.renderOwnerCard(owner)}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Tree Lines to Coaches */}
           {coaches && coaches.length > 0 && this.renderTreeLines(coaches.length)}
