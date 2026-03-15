@@ -77,77 +77,13 @@ class SponsorsSection extends Component {
             </span>
           </div>
 
-          {/* App preview image */}
-          <div className="relative w-full overflow-hidden" style={{ maxHeight: '280px' }}>
+          {/* OG image — contains all branding */}
+          <div className="relative w-full overflow-hidden rounded-2xl">
             <img
               src={sponsor.preview}
               alt={`${sponsor.name} — app preview`}
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-              style={{ minHeight: '200px' }}
+              className="w-full h-auto object-cover transition-transform duration-700 group-hover:scale-[1.02]"
             />
-          </div>
-
-          {/* Content area */}
-          <div className="relative p-6 md:p-8 z-10">
-            <div>
-              <div>
-                <h3
-                  className="text-xl md:text-2xl font-bold mb-1 transition-colors duration-300"
-                  style={{ color: '#e9d5ff' }}
-                >
-                  <span className="group-hover:text-white transition-colors duration-300">
-                    {sponsor.name}
-                  </span>
-                </h3>
-                <p
-                  className="text-xs md:text-sm font-semibold uppercase tracking-wider mb-3"
-                  style={{ color: '#a855f7' }}
-                >
-                  {sponsor.tagline}
-                </p>
-                <p className="text-sm leading-relaxed mb-4" style={{ color: 'rgba(233, 213, 255, 0.5)' }}>
-                  {sponsor.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Feature pills */}
-            <div className="flex flex-wrap gap-2 mt-4 mb-5">
-              {sponsor.features.map((feature, i) => (
-                <span
-                  key={i}
-                  className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{
-                    background: 'rgba(147, 51, 234, 0.1)',
-                    color: '#c084fc',
-                    border: '1px solid rgba(147, 51, 234, 0.2)',
-                  }}
-                >
-                  {feature}
-                </span>
-              ))}
-            </div>
-
-            {/* CTA row */}
-            <div className="flex items-center justify-between pt-4"
-              style={{ borderTop: '1px solid rgba(147, 51, 234, 0.15)' }}
-            >
-              <div className="flex items-center gap-2 text-xs" style={{ color: 'rgba(168, 85, 247, 0.6)' }}>
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-                </svg>
-                worldwideaudioguide.com
-              </div>
-              <span
-                className="inline-flex items-center gap-2 font-semibold text-sm group-hover:gap-3 transition-all duration-300"
-                style={{ color: '#a855f7' }}
-              >
-                Explore App
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                </svg>
-              </span>
-            </div>
           </div>
 
           {/* Ambient purple glow on hover */}
