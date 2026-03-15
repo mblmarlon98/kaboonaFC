@@ -4,6 +4,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import PlayerFIFACard from '../../components/shared/PlayerFIFACard';
 import { supabase } from '../../services/supabase';
+import { getTaggedPhotosForPlayer } from '../../services/fanPortalService';
 
 /**
  * Public Player Profile page
@@ -17,6 +18,8 @@ class PlayerProfile extends Component {
       player: null,
       isLoading: true,
       error: null,
+      taggedPhotos: [],
+      selectedPhotoIndex: -1,
     };
   }
 
@@ -60,6 +63,16 @@ class PlayerProfile extends Component {
         player: data,
         isLoading: false,
       });
+
+      // Load tagged photos for this player
+      if (data?.user_id) {
+        try {
+          const taggedPhotos = await getTaggedPhotosForPlayer(data.user_id);
+          this.setState({ taggedPhotos });
+        } catch (tagErr) {
+          console.warn('Failed to load tagged photos:', tagErr);
+        }
+      }
     } catch (error) {
       console.error('Error loading player:', error);
       this.setState({
@@ -118,7 +131,7 @@ class PlayerProfile extends Component {
 
   render() {
     const { currentUser } = this.props;
-    const { player, isLoading, error } = this.state;
+    const { player, isLoading, error, taggedPhotos, selectedPhotoIndex } = this.state;
 
     if (isLoading) {
       return (
@@ -315,6 +328,106 @@ class PlayerProfile extends Component {
             </div>
           </div>
         </section>
+
+        {/* Tagged Photos Section */}
+        {taggedPhotos.length > 0 && (
+          <section className="max-w-6xl mx-auto px-4 pb-16">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+            >
+              <h3 className="text-xl font-display font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-3">
+                <svg className="w-5 h-5 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Tagged Photos
+                <span className="text-sm font-normal text-white/40">({taggedPhotos.length})</span>
+              </h3>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {taggedPhotos.map((tag, i) => {
+                  const photo = tag.gallery_photos;
+                  return (
+                    <motion.div
+                      key={tag.id}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.6 + i * 0.05 }}
+                      className="group relative aspect-square rounded-xl overflow-hidden cursor-pointer bg-surface-dark-elevated"
+                      onClick={() => this.setState({ selectedPhotoIndex: i })}
+                    >
+                      <img
+                        src={photo.image_url}
+                        alt={photo.caption || ''}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-2 left-2 right-2">
+                          {photo.caption && (
+                            <p className="text-white text-xs truncate">{photo.caption}</p>
+                          )}
+                          {photo.gallery_albums?.title && (
+                            <p className="text-white/50 text-[10px] mt-0.5">{photo.gallery_albums.title}</p>
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            </motion.div>
+
+            {/* Simple photo viewer for tagged photos */}
+            {selectedPhotoIndex >= 0 && taggedPhotos[selectedPhotoIndex] && (
+              <div
+                className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center"
+                onClick={() => this.setState({ selectedPhotoIndex: -1 })}
+              >
+                <button
+                  onClick={() => this.setState({ selectedPhotoIndex: -1 })}
+                  className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+                {selectedPhotoIndex > 0 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); this.setState({ selectedPhotoIndex: selectedPhotoIndex - 1 }); }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+                {selectedPhotoIndex < taggedPhotos.length - 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); this.setState({ selectedPhotoIndex: selectedPhotoIndex + 1 }); }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+                  >
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+                )}
+                <div onClick={(e) => e.stopPropagation()} className="max-w-5xl px-4">
+                  <img
+                    src={taggedPhotos[selectedPhotoIndex].gallery_photos.image_url}
+                    alt=""
+                    className="max-w-full max-h-[80vh] object-contain rounded-lg mx-auto"
+                  />
+                  {taggedPhotos[selectedPhotoIndex].gallery_photos.caption && (
+                    <p className="text-white text-sm text-center mt-3">
+                      {taggedPhotos[selectedPhotoIndex].gallery_photos.caption}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
       </div>
     );
   }

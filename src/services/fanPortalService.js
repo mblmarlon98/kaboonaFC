@@ -345,6 +345,68 @@ export const uploadPhoto = async ({ albumId, userId, file, caption }) => {
   return data;
 };
 
+// ─── Photo Tags ─────────────────────────────────────────────────
+
+export const getPhotoTags = async (photoId) => {
+  const { data, error } = await supabase
+    .from('photo_tags')
+    .select(`
+      *,
+      profiles:player_id ( full_name, profile_image_url )
+    `)
+    .eq('photo_id', photoId);
+  if (error) throw error;
+  return data || [];
+};
+
+export const addPhotoTag = async ({ photoId, playerId, x, y, taggedBy }) => {
+  const { data, error } = await supabase
+    .from('photo_tags')
+    .insert({
+      photo_id: photoId,
+      player_id: playerId,
+      x_position: x,
+      y_position: y,
+      tagged_by: taggedBy,
+    })
+    .select(`*, profiles:player_id ( full_name, profile_image_url )`)
+    .single();
+  if (error) throw error;
+  return data;
+};
+
+export const removePhotoTag = async (tagId) => {
+  const { error } = await supabase.from('photo_tags').delete().eq('id', tagId);
+  if (error) throw error;
+};
+
+export const getTaggedPhotosForPlayer = async (playerId) => {
+  const { data, error } = await supabase
+    .from('photo_tags')
+    .select(`
+      *,
+      gallery_photos:photo_id (
+        id, image_url, caption, created_at,
+        gallery_albums:album_id ( id, title ),
+        profiles:user_id ( full_name )
+      )
+    `)
+    .eq('player_id', playerId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).filter(t => t.gallery_photos);
+};
+
+export const searchPlayers = async (query) => {
+  const { data, error } = await supabase
+    .from('players_with_profiles')
+    .select('id, user_id, name, image, position, number')
+    .ilike('name', `%${query}%`)
+    .limit(10);
+  if (error) throw error;
+  return data || [];
+};
+
 export const uploadFanPostImage = async (userId, file) => {
   const ext = file.name.split('.').pop();
   const path = `${userId}/posts/${Date.now()}.${ext}`;
