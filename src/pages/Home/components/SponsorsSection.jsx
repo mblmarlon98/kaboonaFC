@@ -7,14 +7,15 @@ gsap.registerPlugin(ScrollTrigger);
 const SPONSORS = [
   {
     name: 'World Wide AudioGuide',
-    logo: '/sponsors/audioguide-logo.png',
     preview: '/sponsors/audioguide-og.jpg',
     url: 'https://www.worldwideaudioguide.com',
-    tagline: 'Free Audio Guides & Self-Guided Walking Tours Worldwide',
-    description:
-      'Explore 1,000+ cities with free audio guides for landmarks, museums, and hidden gems. Self-guided walking tours on your phone — no download needed.',
     tier: 'gold',
-    features: ['1,000+ Cities', 'AI-Powered Narration', 'Free to Use'],
+  },
+  {
+    name: 'MBL — Marlon Berdefy',
+    preview: '/sponsors/mblmarlon-og.jpg',
+    url: 'https://mblmarlon.com',
+    tier: 'silver',
   },
 ];
 
