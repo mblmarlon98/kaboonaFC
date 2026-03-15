@@ -20,14 +20,62 @@ CREATE TABLE public.injuries (
   expected_return DATE,
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'recovered')),
   created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   recovered_at TIMESTAMPTZ
 );
+
+CREATE INDEX idx_injuries_player_status ON injuries(player_id, status);
+CREATE INDEX idx_injuries_active ON injuries(status) WHERE status = 'active';
+
+CREATE TRIGGER set_injuries_updated_at
+  BEFORE UPDATE ON injuries
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
-**RLS policies:**
-- SELECT: coaches/managers/owners/admins see all; players see only their own
-- INSERT: coaches + players (players can only insert where `player_id = auth.uid()`)
-- UPDATE: coaches can update any; players can update their own
+**RLS policies (full SQL pattern):**
+- All policies use the dual-role pattern: `profiles.role IN (...) OR profiles.roles && ARRAY[...]::TEXT[]`
+- Coach roles = `('coach', 'manager', 'owner', 'admin', 'super_admin')`
+
+```sql
+-- SELECT: coaches see all, players see own
+CREATE POLICY injuries_select ON injuries FOR SELECT USING (
+  player_id = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid()
+    AND (role IN ('coach','manager','admin','super_admin') OR roles && ARRAY['coach','manager','owner','admin','super_admin']::TEXT[])
+  )
+);
+
+-- INSERT: coaches can insert for any player; players only for themselves
+-- reported_by must always be auth.uid()
+CREATE POLICY injuries_insert ON injuries FOR INSERT WITH CHECK (
+  reported_by = auth.uid()
+  AND (
+    player_id = auth.uid()
+    OR EXISTS (
+      SELECT 1 FROM profiles WHERE id = auth.uid()
+      AND (role IN ('coach','manager','admin','super_admin') OR roles && ARRAY['coach','manager','owner','admin','super_admin']::TEXT[])
+    )
+  )
+);
+
+-- UPDATE: coaches can update any, players can update their own
+CREATE POLICY injuries_update ON injuries FOR UPDATE USING (
+  player_id = auth.uid()
+  OR EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid()
+    AND (role IN ('coach','manager','admin','super_admin') OR roles && ARRAY['coach','manager','owner','admin','super_admin']::TEXT[])
+  )
+);
+
+-- DELETE: admins only (for erroneous records)
+CREATE POLICY injuries_delete ON injuries FOR DELETE USING (
+  EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid()
+    AND (role IN ('admin','super_admin') OR roles && ARRAY['admin','super_admin']::TEXT[])
+  )
+);
+```
 
 ### New Table: `squad_presets`
 
@@ -39,9 +87,13 @@ CREATE TABLE public.squad_presets (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TRIGGER set_squad_presets_updated_at
+  BEFORE UPDATE ON squad_presets
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
-**RLS:** coaches/managers/owners/admins full CRUD.
+**RLS:** coaches/managers/owners/admins/super_admins full CRUD. Squad presets are match-agnostic — they are reusable named player collections. The link between a preset and a match invitation is handled in the frontend only.
 
 ### New Table: `squad_preset_players`
 
@@ -65,37 +117,64 @@ CREATE TABLE public.custom_formations (
   name TEXT NOT NULL,
   positions JSONB NOT NULL DEFAULT '[]'::JSONB,
   created_by UUID NOT NULL REFERENCES profiles(id),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE TRIGGER set_custom_formations_updated_at
+  BEFORE UPDATE ON custom_formations
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 `positions` format: `[{label: "GK", x: 50, y: 95}, {label: "CB", x: 30, y: 80}, ...]`
 These are templates — position slots on the pitch without assigned players.
 
-**RLS:** coaches/managers/owners/admins full CRUD.
+**RLS:** coaches/managers/owners/admins/super_admins full CRUD.
 
 ### Alter: `formations` table
 
 ```sql
 ALTER TABLE public.formations ADD COLUMN is_draft BOOLEAN DEFAULT TRUE;
+-- Fix existing published formations
+UPDATE formations SET is_draft = FALSE WHERE published = TRUE;
 ```
 
 - `is_draft = true`: coach is still building the starting 11
 - `is_draft = false` + `published = true`: starting 11 is live and visible to fans
 - Publishing requires all 11 formation players to have `accepted` status on the match invitation
 
+**Fan portal visibility:** Add a public SELECT policy for published formations so unauthenticated visitors can see the starting 11:
+```sql
+CREATE POLICY formations_public_read ON formations FOR SELECT
+  USING (published = TRUE);
+```
+
 ### Alter: `notifications` type check
 
-Add new notification types to the existing check constraint:
-- `note_created` — coach wrote a note for a player
-- `injury_reported` — player self-reported an injury (sent to coaches)
-- `starting_11` — player notified they're in the starting 11 (or squad)
+Drop and recreate the CHECK constraint to include all types (existing + new):
+```sql
+ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check;
+ALTER TABLE notifications ADD CONSTRAINT notifications_type_check CHECK (
+  type IN (
+    'training_invite', 'match_invite', 'formation_published', 'match_reminder',
+    'general', 'player_approved', 'player_request', 'player_declined',
+    'event_invitation', 'event_cancellation',
+    'note_created', 'injury_reported', 'starting_11'
+  )
+);
+```
+
+Note: `event_invitation` and `event_cancellation` are already used by `schedulingService.js` but may be missing from the current constraint. This migration ensures they are all present.
+
+### Edge case: player injured after being placed in draft formation
+
+If a player is placed in a draft formation and later reports an injury, the player is **flagged** in the formation UI (shown with injury badge) but NOT auto-removed. The coach decides whether to replace them or keep them if recovery is expected before match day.
 
 ## Feature 1: Injury System
 
 ### Coach marks player injured
 - From squad selection view or PlayerNotes component
-- Creates `injuries` row with `status: 'active'`
+- Creates `injuries` row with `status: 'active'`, `reported_by: auth.uid()`
 - Player immediately excluded from squad selection (greyed out, unclickable)
 - Player stops receiving match/training invitation notifications
 - If player is in a squad preset, they stay listed but shown as injured when preset is used
@@ -103,20 +182,20 @@ Add new notification types to the existing check constraint:
 ### Player self-reports injury
 - Profile page gets "Report Injury" section (visible only when player has no active injury)
 - Fields: injury description (text), estimated recovery date (date picker)
-- Creates `injuries` row with `reported_by = auth.uid()`
+- Creates `injuries` row with `reported_by = auth.uid()`, `player_id = auth.uid()`
 - Notification sent to all users with coach/manager/owner roles: "Player XX has just filed an injury"
 - Player immediately shown as injured across the system
 
 ### Recovery
 - Coach clears injury manually → sets `status: 'recovered'`, `recovered_at: now()`
 - Player can also mark themselves recovered from profile page
-- `expected_return` is informational only — no auto-recovery
+- `expected_return` is informational only — no auto-recovery (coach must explicitly clear)
 - Full injury history preserved (old rows remain with `status: 'recovered'`)
 
 ### Where injuries surface
 - **Squad selection:** injured players greyed out with injury icon, unclickable
 - **Squad presets:** injured players marked with badge, still in preset list
-- **Formation builder:** injured players cannot be dragged onto pitch
+- **Formation builder:** injured players cannot be dragged onto pitch; if already in draft, flagged with injury badge
 - **PlayerNotes:** injury status visible at top of player's notes panel
 - **Invitation sending:** injured players auto-excluded from bulk notifications
 
@@ -183,6 +262,7 @@ Add new notification types to the existing check constraint:
 - Pitch visualization with published formation (player names + positions)
 - If no starting 11 published: "Lineup TBA" with match details only
 - After match date passes: auto-switches to next upcoming match
+- Accessible to unauthenticated visitors (public SELECT on published formations)
 
 ## Feature 6: Note Notifications
 
@@ -194,14 +274,14 @@ Add new notification types to the existing check constraint:
 
 ## Deployment
 
-- Write single migration file covering all schema changes
-- Apply to local Supabase via `supabase db push` or migration
-- Apply to production Supabase (`fqxsnpcnhiwjbbmwqfdp`) via `supabase db push --linked` or direct SQL execution
+- Write single migration file wrapped in a transaction (Supabase migrations are transactional by default)
+- Apply to local Supabase via `supabase migration up`
+- Apply to production Supabase (`fqxsnpcnhiwjbbmwqfdp`) via direct SQL execution on the Supabase SQL editor or `supabase db push --linked`
 
 ## Files to Create/Modify
 
 ### New files:
-- `supabase/migrations/YYYYMMDD_squad_injury_system.sql`
+- `supabase/migrations/20260315300000_squad_injury_system.sql`
 - `src/services/injuryService.js`
 - `src/services/squadPresetService.js`
 - `src/pages/Dashboard/components/SquadPresets.jsx`
@@ -212,10 +292,13 @@ Add new notification types to the existing check constraint:
 - `src/services/schedulingService.js` — skip injured players in sendInvitations
 - `src/services/notificationService.js` — new notification types
 - `src/pages/Dashboard/components/PlayerNotes.jsx` — send notification on note create, show injury status
-- `src/pages/Dashboard/components/SquadSelection.jsx` — grey out injured, respect presets
+- `src/pages/Dashboard/components/SquadSelection.jsx` — grey out injured, respect presets (consider splitting into subcomponents if file grows too large)
 - `src/pages/Dashboard/components/CalendarEventModal.jsx` — preset selection in invitation step
 - `src/pages/Dashboard/DashboardSidebar.jsx` — add Squad Presets nav item
 - `src/pages/Dashboard/DashboardHome.jsx` — route for new components
 - `src/pages/Profile/Profile.jsx` — injury self-report section
 - `src/pages/FanPortal/FanPortal.jsx` — add NextMatch component
-- Formation builder component — draft/publish workflow, custom formation support, position bug fix
+- `src/pages/Dashboard/components/FormationBuilder.jsx` — draft/publish workflow, custom formation support, position bug fix
+
+### Optional optimization:
+- Update `players_full` or `players_with_profiles` views to include an `is_injured` computed column (LEFT JOIN on `injuries WHERE status = 'active'`) to simplify consumers
