@@ -1092,7 +1092,7 @@ class ProfileEdit extends Component {
             <div className={`${isPlayer ? 'lg:col-span-8' : ''} space-y-8`}>
               {/* Personal Information */}
               <motion.div
-                className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
+                className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
@@ -1186,7 +1186,7 @@ class ProfileEdit extends Component {
               {/* Player Information (players only) */}
               {!isPlayer ? null : (
               <motion.div
-                className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20 overflow-hidden"
+                className="bg-surface-dark-elevated rounded-xl border border-accent-gold/20"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
