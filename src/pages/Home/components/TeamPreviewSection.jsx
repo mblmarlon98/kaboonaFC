@@ -20,7 +20,6 @@ const ROLE_DISPLAY = {
   owner: { label: 'Owner', color: 'text-yellow-300' },
   manager: { label: 'Manager', color: 'text-blue-400' },
   coach: { label: 'Coach', color: 'text-accent-gold' },
-  admin: { label: 'Admin', color: 'text-green-400' },
 };
 
 class TeamPreviewSection extends Component {
@@ -75,8 +74,8 @@ class TeamPreviewSection extends Component {
         console.warn('Could not fetch staff profiles:', error);
       }
 
-      const staffRoles = ['owner', 'manager', 'coach', 'admin'];
-      const rolePriority = { owner: 0, manager: 1, coach: 2, admin: 3 };
+      const staffRoles = ['owner', 'manager', 'coach'];
+      const rolePriority = { owner: 0, manager: 1, coach: 2 };
 
       const staffMembers = (data || [])
         .filter((p) => {
