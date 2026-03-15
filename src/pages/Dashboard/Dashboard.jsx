@@ -29,6 +29,8 @@ import EventsManagement from './components/EventsManagement';
 import PlayerAttendance from './components/PlayerAttendance';
 import PlayerNotes from './components/PlayerNotes';
 import ActivityLog from './components/ActivityLog';
+import SquadPresets from './components/SquadPresets';
+import MatchDetail from './components/MatchDetail';
 
 /**
  * Placeholder page component for routes not yet wired to real components.
@@ -255,6 +257,8 @@ class Dashboard extends Component {
                 <Route path="match-evaluation" element={<MatchEvaluation />} />
                 <Route path="attendance" element={<PlayerAttendance />} />
                 <Route path="player-notes" element={<PlayerNotes />} />
+                <Route path="squad-presets" element={<SquadPresets />} />
+                <Route path="match/:matchId" element={<MatchDetail />} />
 
                 {/* Marketing & Content */}
                 <Route path="content" element={<ContentManagement user={user} />} />

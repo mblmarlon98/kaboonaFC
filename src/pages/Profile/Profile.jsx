@@ -11,6 +11,7 @@ import AttendanceHistory from './components/AttendanceHistory';
 import { supabase } from '../../services/supabase';
 import { refreshUser } from '../../services/auth';
 import { requestPlayerStatus } from '../../services/playerRequestService';
+import { getActiveInjury, reportInjury, recoverInjury, notifyCoachesOfInjury } from '../../services/injuryService';
 import { setUser } from '../../redux/slices/authSlice';
 
 /**
@@ -26,6 +27,12 @@ class Profile extends Component {
       playerData: null,
       error: null,
       requestingPlayer: false,
+      // Injury state
+      activeInjury: null,
+      injuryNote: '',
+      injuryReturnDate: '',
+      reportingInjury: false,
+      recoveringInjury: false,
     };
   }
 
@@ -35,6 +42,7 @@ class Profile extends Component {
 
     // Load player data from database
     this.loadPlayerData();
+    this.fetchActiveInjury();
   }
 
   loadPlayerData = async () => {
@@ -184,6 +192,60 @@ class Profile extends Component {
     }
 
     this.setState({ requestingPlayer: false });
+  };
+
+  fetchActiveInjury = async () => {
+    const { user } = this.props;
+    if (!user?.id) return;
+    try {
+      const injury = await getActiveInjury(user.id);
+      this.setState({ activeInjury: injury });
+    } catch (err) {
+      console.error('Error fetching active injury:', err);
+    }
+  };
+
+  handleReportInjury = async () => {
+    const { user } = this.props;
+    const { injuryNote, injuryReturnDate } = this.state;
+    if (!user?.id) return;
+
+    this.setState({ reportingInjury: true });
+    try {
+      const injury = await reportInjury({
+        playerId: user.id,
+        reportedBy: user.id,
+        injuryNote: injuryNote.trim() || null,
+        expectedReturn: injuryReturnDate || null,
+      });
+
+      const playerName = user.user_metadata?.full_name || user.email;
+      await notifyCoachesOfInjury(playerName);
+
+      this.setState({
+        activeInjury: injury,
+        injuryNote: '',
+        injuryReturnDate: '',
+        reportingInjury: false,
+      });
+    } catch (err) {
+      console.error('Error reporting injury:', err);
+      this.setState({ reportingInjury: false });
+    }
+  };
+
+  handleRecoverInjury = async () => {
+    const { activeInjury } = this.state;
+    if (!activeInjury) return;
+
+    this.setState({ recoveringInjury: true });
+    try {
+      await recoverInjury(activeInjury.id);
+      this.setState({ activeInjury: null, recoveringInjury: false });
+    } catch (err) {
+      console.error('Error marking recovery:', err);
+      this.setState({ recoveringInjury: false });
+    }
   };
 
   handleManageSubscription = () => {
@@ -529,6 +591,79 @@ class Profile extends Component {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Injury Self-Report */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+          {this.state.activeInjury ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6"
+            >
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-display font-bold text-white mb-1">Currently Injured</h3>
+                  {this.state.activeInjury.injury_note && (
+                    <p className="text-white/60 text-sm mb-2">{this.state.activeInjury.injury_note}</p>
+                  )}
+                  {this.state.activeInjury.expected_return && (
+                    <p className="text-white/50 text-sm">
+                      Expected return: <span className="text-white/80">{new Date(this.state.activeInjury.expected_return + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    </p>
+                  )}
+                  <button
+                    onClick={this.handleRecoverInjury}
+                    disabled={this.state.recoveringInjury}
+                    className="mt-4 px-5 py-2.5 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    {this.state.recoveringInjury ? 'Updating...' : 'Mark as Recovered'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-surface-dark-elevated border border-white/10 rounded-2xl p-6"
+            >
+              <h3 className="text-lg font-display font-bold text-white mb-4">Report an Injury</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm text-white/50 mb-1">Injury Details</label>
+                  <input
+                    type="text"
+                    value={this.state.injuryNote}
+                    onChange={(e) => this.setState({ injuryNote: e.target.value })}
+                    placeholder="e.g. Hamstring strain"
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-white/50 mb-1">Expected Return</label>
+                  <input
+                    type="date"
+                    value={this.state.injuryReturnDate}
+                    onChange={(e) => this.setState({ injuryReturnDate: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:border-accent-gold"
+                  />
+                </div>
+              </div>
+              <button
+                onClick={this.handleReportInjury}
+                disabled={this.state.reportingInjury}
+                className="px-5 py-2.5 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {this.state.reportingInjury ? 'Reporting...' : 'Report Injury'}
+              </button>
+            </motion.div>
+          )}
         </div>
 
         {/* Upcoming Events */}

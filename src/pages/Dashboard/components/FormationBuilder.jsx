@@ -62,6 +62,12 @@ class FormationBuilder extends Component {
       selectingForSlot: null,
       showAllPlayers: false,
 
+      // Custom formations
+      customFormations: [],
+      showCustomFormationInput: false,
+      customFormationName: '',
+      savingCustomFormation: false,
+
       // UI
       isSaving: false,
       isPublishing: false,
@@ -71,6 +77,7 @@ class FormationBuilder extends Component {
 
   componentDidMount() {
     this.fetchMatches();
+    this.fetchCustomFormations();
   }
 
   // ─── Data Fetching ──────────────────────────────────────────────────
@@ -82,6 +89,66 @@ class FormationBuilder extends Component {
     } catch (error) {
       console.error('Error fetching matches:', error);
       this.setState({ matches: [], loadingMatches: false });
+    }
+  };
+
+  fetchCustomFormations = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('custom_formations')
+        .select('*')
+        .order('name');
+
+      if (!error && data) {
+        this.setState({ customFormations: data });
+      }
+    } catch (err) {
+      console.error('Error fetching custom formations:', err);
+    }
+  };
+
+  handleSaveCustomFormation = async () => {
+    const { customFormationName, selectedFormation } = this.state;
+    const trimmedName = customFormationName.trim();
+    if (!trimmedName) return;
+
+    this.setState({ savingCustomFormation: true });
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('custom_formations')
+        .insert({
+          name: trimmedName,
+          positions: [], // Positions are stored per-match in formations table
+          created_by: user.id,
+        });
+
+      if (error) throw error;
+
+      this.setState({
+        customFormationName: '',
+        showCustomFormationInput: false,
+        savingCustomFormation: false,
+      });
+      await this.fetchCustomFormations();
+    } catch (err) {
+      console.error('Error saving custom formation:', err);
+      this.setState({ savingCustomFormation: false });
+    }
+  };
+
+  handleDeleteCustomFormation = async (formationId) => {
+    try {
+      await supabase
+        .from('custom_formations')
+        .delete()
+        .eq('id', formationId);
+
+      await this.fetchCustomFormations();
+    } catch (err) {
+      console.error('Error deleting custom formation:', err);
     }
   };
 
@@ -329,6 +396,7 @@ class FormationBuilder extends Component {
         positions,
         created_by: user.id,
         published: false,
+        is_draft: true,
       };
 
       if (existingFormationId) {
@@ -360,6 +428,18 @@ class FormationBuilder extends Component {
   };
 
   handlePublish = async () => {
+    const { placedPlayers } = this.state;
+    const placedCount = Object.keys(placedPlayers).length;
+
+    // Must have 11 players placed
+    if (placedCount < 11) {
+      this.setState({
+        saveMessage: { type: 'error', text: `Need 11 players to publish (${placedCount}/11 placed).` },
+      });
+      setTimeout(() => this.setState({ saveMessage: null }), 3000);
+      return;
+    }
+
     this.setState({ isPublishing: true, saveMessage: null });
 
     try {
@@ -382,6 +462,7 @@ class FormationBuilder extends Component {
         positions,
         created_by: user.id,
         published: true,
+        is_draft: false,
         published_at: new Date().toISOString(),
       };
 
@@ -397,11 +478,31 @@ class FormationBuilder extends Component {
 
       if (error) throw error;
 
-      // Notify all match players
-      const playerUserIds = matchPlayers.map((p) => p.user_id).filter(Boolean);
-      if (playerUserIds.length > 0) {
-        const opponent = selectedMatch?.opponent || 'opponent';
-        await createBulkNotifications(playerUserIds, {
+      // Notify starting 11 players
+      const startingPlayerIds = positions
+        .map((pos) => {
+          const player = matchPlayers.find((p) => p.id === pos.player_id);
+          return player?.user_id;
+        })
+        .filter(Boolean);
+
+      const opponent = selectedMatch?.opponent || 'opponent';
+
+      if (startingPlayerIds.length > 0) {
+        await createBulkNotifications(startingPlayerIds, {
+          title: 'Starting 11',
+          body: `You are in the starting 11 for match vs ${opponent}`,
+          type: 'starting_11',
+          referenceType: 'match',
+          referenceId: selectedMatchId,
+        });
+      }
+
+      // Notify remaining match players
+      const allPlayerUserIds = matchPlayers.map((p) => p.user_id).filter(Boolean);
+      const nonStartingIds = allPlayerUserIds.filter((id) => !startingPlayerIds.includes(id));
+      if (nonStartingIds.length > 0) {
+        await createBulkNotifications(nonStartingIds, {
           title: 'Formation Published',
           body: `Formation published for match vs ${opponent}`,
           type: 'formation_published',
@@ -744,6 +845,81 @@ class FormationBuilder extends Component {
                   </button>
                 ))}
               </div>
+
+              {/* Custom Formations */}
+              {this.state.customFormations.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Custom</p>
+                  <div className="flex flex-wrap gap-2">
+                    {this.state.customFormations.map((cf) => (
+                      <div key={cf.id} className="flex items-center gap-1">
+                        <button
+                          onClick={() => this.handleFormationChange(cf.name)}
+                          className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                            selectedFormation === cf.name
+                              ? 'bg-accent-gold text-black'
+                              : 'bg-white/10 text-gray-300 hover:bg-white/20'
+                          }`}
+                        >
+                          {cf.name}
+                        </button>
+                        <button
+                          onClick={() => this.handleDeleteCustomFormation(cf.id)}
+                          className="p-1 text-white/20 hover:text-red-400 transition-colors"
+                          title="Delete formation"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Add Custom Formation */}
+              <div className="mt-3 pt-3 border-t border-white/10">
+                {this.state.showCustomFormationInput ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={this.state.customFormationName}
+                      onChange={(e) => this.setState({ customFormationName: e.target.value })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') this.handleSaveCustomFormation();
+                        if (e.key === 'Escape') this.setState({ showCustomFormationInput: false, customFormationName: '' });
+                      }}
+                      placeholder="e.g. 4-1-3-2"
+                      className="flex-1 px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-white/30 focus:outline-none focus:border-accent-gold"
+                      autoFocus
+                    />
+                    <button
+                      onClick={this.handleSaveCustomFormation}
+                      disabled={this.state.savingCustomFormation || !this.state.customFormationName.trim()}
+                      className="px-4 py-2 bg-accent-gold text-black font-bold text-sm rounded-lg hover:bg-accent-gold-light transition-colors disabled:opacity-50"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => this.setState({ showCustomFormationInput: false, customFormationName: '' })}
+                      className="px-3 py-2 bg-white/10 text-white/60 text-sm rounded-lg hover:bg-white/20 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => this.setState({ showCustomFormationInput: true })}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-white/50 hover:text-white/80 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    Create Custom Formation
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Loading players spinner */}
@@ -765,9 +941,20 @@ class FormationBuilder extends Component {
                   <div className="bg-surface-dark-elevated rounded-xl p-4 border border-white/10">
                     <div className="flex items-center justify-between mb-4">
                       <div>
-                        <h3 className="text-lg font-display font-bold text-white">
-                          {selectedFormation} Formation
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-lg font-display font-bold text-white">
+                            {selectedFormation} Formation
+                          </h3>
+                          {this.state.existingFormationId && (
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              this.state.placedPlayers && Object.values(this.state.placedPlayers).length > 0
+                                ? 'bg-yellow-500/20 text-yellow-400'
+                                : 'bg-white/10 text-white/40'
+                            }`}>
+                              Draft
+                            </span>
+                          )}
+                        </div>
                         <p className="text-sm text-gray-400">
                           vs {selectedMatch?.opponent} — {placedCount}/11 players placed
                         </p>

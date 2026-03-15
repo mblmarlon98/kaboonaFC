@@ -10,8 +10,10 @@ import MatchDayHub from './components/MatchDayHub';
 import Gallery from './components/Gallery';
 import News from './components/News';
 import EventsCalendar from './components/EventsCalendar';
+import NextMatch from './components/NextMatch';
 
 const SECTIONS = [
+  { id: 'next-match', label: 'Next Match' },
   { id: 'news', label: 'News' },
   { id: 'match-center', label: 'Match Center' },
   { id: 'fan-wall', label: 'Fan Wall' },
@@ -104,6 +106,7 @@ class FanPortal extends Component {
 
         {/* All Sections */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-16">
+          <div ref={this.sectionRefs['next-match']}><NextMatch /></div>
           <div ref={this.sectionRefs['news']}><News /></div>
           <div ref={this.sectionRefs['match-center']}><MatchCenter /></div>
           <div ref={this.sectionRefs['fan-wall']}><FanWall /></div>
