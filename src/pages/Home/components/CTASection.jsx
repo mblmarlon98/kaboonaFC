@@ -61,8 +61,8 @@ class CTASection extends Component {
           ease: 'power2.out',
           scrollTrigger: {
             trigger: this.sectionRef.current,
-            start: 'top 75%',
-            toggleActions: 'play none none reverse',
+            start: 'top 85%',
+            once: true,
           },
         }
       );

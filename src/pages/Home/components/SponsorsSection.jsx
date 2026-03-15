@@ -35,8 +35,8 @@ class SponsorsSection extends Component {
           stagger: 0.15,
           scrollTrigger: {
             trigger: this.sectionRef.current,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse',
+            start: 'top 85%',
+            once: true,
           },
         }
       );
