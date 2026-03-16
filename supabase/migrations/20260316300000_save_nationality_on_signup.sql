@@ -56,10 +56,17 @@ BEGIN
     RETURN jsonb_build_object('success', false, 'error', 'Invitation has reached maximum uses');
   END IF;
 
-  -- Update the user's profile with the invited roles
+  -- Update the user's profile with the invited roles (use role priority, not first element)
   UPDATE profiles
-  SET role = inv.roles[1],
-      roles = inv.roles
+  SET role = COALESCE(
+        (SELECT unnest FROM unnest(inv.roles)
+         WHERE unnest IN ('owner','manager','coach','admin','editor','marketing','player')
+         ORDER BY array_position(ARRAY['owner','manager','coach','admin','editor','marketing','player'], unnest)
+         LIMIT 1),
+        inv.roles[1]
+      ),
+      roles = inv.roles,
+      player_request_status = CASE WHEN 'player' = ANY(inv.roles) THEN 'approved' ELSE player_request_status END
   WHERE id = user_id;
 
   -- Increment invitation use count

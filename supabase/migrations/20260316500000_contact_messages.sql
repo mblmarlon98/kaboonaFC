@@ -11,12 +11,18 @@ create table if not exists public.contact_messages (
 -- RLS
 alter table public.contact_messages enable row level security;
 
--- Anyone can send a message (insert)
-create policy "Anyone can send contact messages"
-  on public.contact_messages for insert
-  with check (true);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Anyone can send contact messages' AND tablename = 'contact_messages') THEN
+    create policy "Anyone can send contact messages"
+      on public.contact_messages for insert
+      with check (true);
+  END IF;
+END $$;
 
--- Recipients can read their own messages
-create policy "Recipients can read own messages"
-  on public.contact_messages for select
-  using (auth.uid() = recipient_id);
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'Recipients can read own messages' AND tablename = 'contact_messages') THEN
+    create policy "Recipients can read own messages"
+      on public.contact_messages for select
+      using (auth.uid() = recipient_id);
+  END IF;
+END $$;
