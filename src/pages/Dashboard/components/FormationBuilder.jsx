@@ -9,7 +9,7 @@ import { createBulkNotifications } from '../../../services/notificationService';
 /**
  * Common formations shown as quick-select buttons
  */
-const COMMON_FORMATIONS = ['4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '3-4-3', '5-3-2'];
+const COMMON_FORMATIONS = ['4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '3-4-3', '5-3-2', '5-4-1'];
 
 /**
  * Position compatibility map (mirrors FormationPitch)
@@ -489,9 +489,18 @@ class FormationBuilder extends Component {
       const opponent = selectedMatch?.opponent || 'opponent';
 
       if (startingPlayerIds.length > 0) {
+        // Calculate arrival time (1 hour before match)
+        const matchTime = selectedMatch?.match_time || '00:00';
+        const [hours, minutes] = matchTime.split(':').map(Number);
+        const arrivalHours = hours - 1 < 0 ? 23 : hours - 1;
+        const arrivalTime = `${String(arrivalHours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+        const matchDate = selectedMatch?.match_date
+          ? new Date(selectedMatch.match_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '';
+
         await createBulkNotifications(startingPlayerIds, {
-          title: 'Starting 11',
-          body: `You are in the starting 11 for match vs ${opponent}`,
+          title: `Starting 11: vs ${opponent}`,
+          body: `You're in the starting 11 on ${matchDate}. Please arrive by ${arrivalTime} at ${selectedMatch?.location || 'the venue'}.`,
           type: 'starting_11',
           referenceType: 'match',
           referenceId: selectedMatchId,
@@ -502,9 +511,13 @@ class FormationBuilder extends Component {
       const allPlayerUserIds = matchPlayers.map((p) => p.user_id).filter(Boolean);
       const nonStartingIds = allPlayerUserIds.filter((id) => !startingPlayerIds.includes(id));
       if (nonStartingIds.length > 0) {
+        const matchDate = selectedMatch?.match_date
+          ? new Date(selectedMatch.match_date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          : '';
+
         await createBulkNotifications(nonStartingIds, {
-          title: 'Formation Published',
-          body: `Formation published for match vs ${opponent}`,
+          title: `Bench: vs ${opponent}`,
+          body: `You're on the bench for vs ${opponent} on ${matchDate}.`,
           type: 'formation_published',
           referenceType: 'match',
           referenceId: selectedMatchId,

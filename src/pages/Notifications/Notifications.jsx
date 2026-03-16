@@ -3,6 +3,7 @@ import { connect } from 'react-redux';
 import { motion } from 'framer-motion';
 import { markRead, markAllRead } from '../../redux/slices/notificationSlice';
 import { markAsRead, markAllAsRead } from '../../services/notificationService';
+import { supabase } from '../../services/supabase';
 
 function getRelativeTime(dateStr) {
   const now = new Date();
@@ -51,7 +52,9 @@ class Notifications extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      filter: 'all', // 'all', 'unread', 'read'
+      filter: 'all',
+      respondingId: null,
+      respondedIds: new Set(),
     };
   }
 
@@ -61,6 +64,53 @@ class Notifications extends Component {
 
   handleFilterChange = (filter) => {
     this.setState({ filter });
+  };
+
+  handleInvitationResponse = async (notification, status) => {
+    this.setState({ respondingId: notification.id });
+
+    try {
+      const { user } = this.props;
+      if (!user) return;
+
+      // Find the event invitation for this user and event
+      const { data: invitation, error: findError } = await supabase
+        .from('event_invitations')
+        .select('id')
+        .eq('event_type', notification.reference_type === 'training' ? 'training' : 'match')
+        .eq('event_id', notification.reference_id)
+        .eq('player_id', user.id)
+        .single();
+
+      if (findError || !invitation) {
+        console.error('Could not find invitation:', findError);
+        this.setState({ respondingId: null });
+        return;
+      }
+
+      // Update invitation status
+      const { error: updateError } = await supabase
+        .from('event_invitations')
+        .update({ status, responded_at: new Date().toISOString() })
+        .eq('id', invitation.id);
+
+      if (updateError) {
+        console.error('Error responding to invitation:', updateError);
+        this.setState({ respondingId: null });
+        return;
+      }
+
+      // Mark notification as read
+      this.handleMarkAsRead(notification);
+
+      this.setState(prev => ({
+        respondingId: null,
+        respondedIds: new Set([...prev.respondedIds, notification.id]),
+      }));
+    } catch (err) {
+      console.error('Error responding:', err);
+      this.setState({ respondingId: null });
+    }
   };
 
   handleMarkAsRead = async (notification) => {
@@ -221,6 +271,28 @@ class Notifications extends Component {
                           {typeInfo.label}
                         </span>
                       </div>
+                      {/* Accept/Decline for invite-type notifications */}
+                      {['training_invite', 'match_invite'].includes(notification.type) && !this.state.respondedIds.has(notification.id) && (
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); this.handleInvitationResponse(notification, 'accepted'); }}
+                            disabled={this.state.respondingId === notification.id}
+                            className="px-3 py-1.5 bg-green-500/20 text-green-400 rounded-lg text-xs font-medium hover:bg-green-500/30 transition-colors disabled:opacity-50"
+                          >
+                            {this.state.respondingId === notification.id ? 'Responding...' : 'Accept'}
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); this.handleInvitationResponse(notification, 'declined'); }}
+                            disabled={this.state.respondingId === notification.id}
+                            className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-xs font-medium hover:bg-red-500/30 transition-colors disabled:opacity-50"
+                          >
+                            Decline
+                          </button>
+                        </div>
+                      )}
+                      {this.state.respondedIds.has(notification.id) && (
+                        <p className="text-white/40 text-xs mt-2">Response sent</p>
+                      )}
                     </div>
                   </motion.div>
                 );

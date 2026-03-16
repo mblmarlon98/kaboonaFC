@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '../../../services/supabase';
 import { createNotification } from '../../../services/notificationService';
+import { getAllActiveInjuries } from '../../../services/injuryService';
 
 /**
  * Players Management Component
@@ -23,6 +24,7 @@ class PlayersManagement extends Component {
       showModal: false,
       modalType: null,
       actionLoading: null,
+      injuryMap: {},
     };
   }
 
@@ -51,6 +53,16 @@ class PlayersManagement extends Component {
 
       if (playersError) {
         console.error('Error fetching players:', playersError);
+      }
+
+      let injuryMap = {};
+      try {
+        const injuries = await getAllActiveInjuries();
+        (injuries || []).forEach(inj => {
+          injuryMap[inj.player_id] = inj;
+        });
+      } catch (err) {
+        console.warn('Could not fetch injuries:', err);
       }
 
       // Also fetch profiles that have player records but may not have role='player'
@@ -106,12 +118,26 @@ class PlayersManagement extends Component {
           status,
           joinDate: profile.created_at,
           profileRole: profile.role,
+          pace: player?.pace,
+          shooting: player?.shooting,
+          passing: player?.passing,
+          dribbling: player?.dribbling,
+          defending: player?.defending,
+          physical: player?.physical,
+          diving: player?.diving,
+          handling: player?.handling,
+          kicking: player?.kicking,
+          reflexes: player?.reflexes,
+          gk_speed: player?.gk_speed,
+          gk_positioning: player?.gk_positioning,
+          image: player?.image,
         };
       });
 
       this.setState({
         players: combinedPlayers,
         filteredPlayers: combinedPlayers,
+        injuryMap,
         isLoading: false,
       }, this.filterPlayers);
     } catch (error) {
@@ -178,6 +204,19 @@ class PlayersManagement extends Component {
         position: player.position || '-',
         status: player.status || 'active',
         number: player.number || '',
+        photo: player.image || null,
+        stat_pace: player.pace || 50,
+        stat_shooting: player.shooting || 50,
+        stat_passing: player.passing || 50,
+        stat_dribbling: player.dribbling || 50,
+        stat_defending: player.defending || 50,
+        stat_physical: player.physical || 50,
+        stat_diving: player.diving || 50,
+        stat_handling: player.handling || 50,
+        stat_kicking: player.kicking || 50,
+        stat_reflexes: player.reflexes || 50,
+        stat_gk_speed: player.gk_speed || 50,
+        stat_gk_positioning: player.gk_positioning || 50,
       } : {},
     });
   };
@@ -186,6 +225,18 @@ class PlayersManagement extends Component {
     const { name, value } = e.target;
     this.setState((prev) => ({
       editForm: { ...prev.editForm, [name]: value },
+    }));
+  };
+
+  handlePhotoSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert('File must be under 5MB');
+      return;
+    }
+    this.setState((prev) => ({
+      editForm: { ...prev.editForm, photoFile: file, photo: URL.createObjectURL(file) },
     }));
   };
 
@@ -200,9 +251,42 @@ class PlayersManagement extends Component {
     this.setState({ actionLoading: selectedPlayer.id });
 
     try {
+      // Upload photo if selected
+      if (editForm.photoFile) {
+        const ext = editForm.photoFile.name.split('.').pop();
+        const path = `${selectedPlayer.id}-${Date.now()}.${ext}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(path, editForm.photoFile, { upsert: true });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path);
+          const imageUrl = urlData.publicUrl;
+          await supabase.from('profiles').update({ profile_image_url: imageUrl }).eq('id', selectedPlayer.id);
+          if (selectedPlayer.playerId) {
+            await supabase.from('players').update({ image: imageUrl }).eq('id', selectedPlayer.playerId);
+          }
+        }
+      }
+
       // Update player record if it exists
       if (selectedPlayer.playerId) {
-        const playerUpdate = { name: editForm.name, position: editForm.position };
+        const playerUpdate = {
+          name: editForm.name,
+          position: editForm.position,
+          pace: parseInt(editForm.stat_pace) || 50,
+          shooting: parseInt(editForm.stat_shooting) || 50,
+          passing: parseInt(editForm.stat_passing) || 50,
+          dribbling: parseInt(editForm.stat_dribbling) || 50,
+          defending: parseInt(editForm.stat_defending) || 50,
+          physical: parseInt(editForm.stat_physical) || 50,
+          diving: parseInt(editForm.stat_diving) || 50,
+          handling: parseInt(editForm.stat_handling) || 50,
+          kicking: parseInt(editForm.stat_kicking) || 50,
+          reflexes: parseInt(editForm.stat_reflexes) || 50,
+          gk_speed: parseInt(editForm.stat_gk_speed) || 50,
+          gk_positioning: parseInt(editForm.stat_gk_positioning) || 50,
+        };
         if (editForm.email) playerUpdate.email = editForm.email;
         if (editForm.number) playerUpdate.number = parseInt(editForm.number, 10);
 
@@ -545,16 +629,28 @@ class PlayersManagement extends Component {
               </thead>
               <tbody className="divide-y divide-white/5">
                 {filteredPlayers.map((player) => (
-                  <tr key={player.id} className="hover:bg-white/5 transition-colors">
+                  <tr key={player.id} className={`hover:bg-white/5 transition-colors ${this.state.injuryMap[player.id] ? 'bg-red-500/5' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-accent-gold/20 rounded-full flex items-center justify-center">
-                          <span className="text-accent-gold font-bold">
-                            {player.name.charAt(0).toUpperCase()}
-                          </span>
+                        <div className="w-10 h-10 bg-accent-gold/20 rounded-full flex items-center justify-center overflow-hidden">
+                          {player.image ? (
+                            <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <span className="text-accent-gold font-bold">
+                              {player.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
                         </div>
                         <div>
                           <p className="text-white font-medium">{player.name}</p>
+                          {this.state.injuryMap[player.id] && (
+                            <span className="ml-2 inline-flex items-center gap-1 text-red-400 text-xs" title={`${this.state.injuryMap[player.id].injury_note || 'Injured'}${this.state.injuryMap[player.id].expected_return ? ` — Expected return: ${new Date(this.state.injuryMap[player.id].expected_return).toLocaleDateString()}` : ''}`}>
+                              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                              </svg>
+                              Injured
+                            </span>
+                          )}
                           {player.email && (
                             <p className="text-white/50 text-sm">{player.email}</p>
                           )}
@@ -653,7 +749,7 @@ class PlayersManagement extends Component {
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="bg-surface-dark-elevated rounded-xl p-6 max-w-md w-full border border-white/10"
+              className="bg-surface-dark-elevated rounded-xl p-6 max-w-lg w-full border border-white/10 overflow-y-auto max-h-[80vh]"
               onClick={(e) => e.stopPropagation()}
             >
               {modalType === 'delete' && (
@@ -693,6 +789,18 @@ class PlayersManagement extends Component {
                     Edit Player
                   </h3>
                   <div className="space-y-4">
+                    <div>
+                      <label className="block text-white/60 text-sm mb-1">Profile Photo</label>
+                      {this.state.editForm?.photo && (
+                        <img src={this.state.editForm.photo} alt="Current" className="w-16 h-16 rounded-full object-cover mb-2" />
+                      )}
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        onChange={this.handlePhotoSelect}
+                        className="w-full text-sm text-white/60 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-accent-gold/20 file:text-accent-gold hover:file:bg-accent-gold/30"
+                      />
+                    </div>
                     <div>
                       <label className="block text-white/60 text-sm mb-1">Name</label>
                       <input
@@ -745,6 +853,29 @@ class PlayersManagement extends Component {
                         <option value="ST">ST - Striker</option>
                       </select>
                     </div>
+                    {this.state.editForm?.position !== 'GK' ? (
+                      <div className="space-y-3">
+                        <label className="block text-white/60 text-sm">Player Stats (1-99)</label>
+                        {['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'].map(stat => (
+                          <div key={stat} className="flex items-center gap-3">
+                            <span className="text-white/50 text-xs w-20 capitalize">{stat}</span>
+                            <input type="range" min="1" max="99" name={`stat_${stat}`} value={this.state.editForm?.[`stat_${stat}`] || 50} onChange={this.handleEditFormChange} className="flex-1 accent-accent-gold" />
+                            <span className="text-white text-xs w-8 text-right">{this.state.editForm?.[`stat_${stat}`] || 50}</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <label className="block text-white/60 text-sm">GK Stats (1-99)</label>
+                        {['diving', 'handling', 'kicking', 'reflexes', 'gk_speed', 'gk_positioning'].map(stat => (
+                          <div key={stat} className="flex items-center gap-3">
+                            <span className="text-white/50 text-xs w-20 capitalize">{stat.replace('gk_', '')}</span>
+                            <input type="range" min="1" max="99" name={`stat_${stat}`} value={this.state.editForm?.[`stat_${stat}`] || 50} onChange={this.handleEditFormChange} className="flex-1 accent-accent-gold" />
+                            <span className="text-white text-xs w-8 text-right">{this.state.editForm?.[`stat_${stat}`] || 50}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div>
                       <label className="block text-white/60 text-sm mb-1">Status</label>
                       <select

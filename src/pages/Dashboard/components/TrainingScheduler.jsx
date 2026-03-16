@@ -11,6 +11,7 @@ import {
   getAllActivePlayers,
   cancelEvent,
 } from '../../../services/schedulingService';
+import { supabase } from '../../../services/supabase';
 
 /**
  * Duration options for the training session dropdown
@@ -83,11 +84,20 @@ class TrainingScheduler extends Component {
 
       // Cancel confirmation
       cancelConfirmId: null,
+
+      // Realtime channels for live invitation tracking
+      realtimeChannels: {},
     };
   }
 
   componentDidMount() {
     this.loadSessions();
+  }
+
+  componentWillUnmount() {
+    Object.values(this.state.realtimeChannels).forEach(ch => {
+      supabase.removeChannel(ch);
+    });
   }
 
   loadSessions = async () => {
@@ -98,11 +108,40 @@ class TrainingScheduler extends Component {
 
       // Load invitation data for each session in parallel
       await Promise.all(sessions.map((s) => this.loadInvitationData(s.id)));
+
+      // Subscribe to real-time invitation changes for each session
+      this.subscribeToSessions(sessions);
     } catch (err) {
       console.error('Failed to load training sessions:', err);
       this.setState({ sessionsLoading: false });
       this.showToast('Failed to load sessions', 'error');
     }
+  };
+
+  subscribeToSessions = (sessions) => {
+    // Clean up old channels
+    Object.values(this.state.realtimeChannels).forEach(ch => {
+      supabase.removeChannel(ch);
+    });
+
+    const channels = {};
+    sessions.forEach(session => {
+      const channel = supabase
+        .channel(`training-invites-${session.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'event_invitations',
+          filter: `event_id=eq.${session.id}`,
+        }, () => {
+          // Re-fetch invitation data on any change
+          this.loadInvitationData(session.id);
+        })
+        .subscribe();
+      channels[session.id] = channel;
+    });
+
+    this.setState({ realtimeChannels: channels });
   };
 
   loadInvitationData = async (sessionId) => {

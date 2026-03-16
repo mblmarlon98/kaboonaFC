@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { connect } from 'react-redux';
 import { signOut } from '../../services/auth';
 import { logout } from '../../redux/slices/authSlice';
-import { markRead, markAllRead, invitationResponded } from '../../redux/slices/notificationSlice';
-import { markAsRead, markAllAsRead } from '../../services/notificationService';
+import { markRead, markAllRead, invitationResponded, addNotification } from '../../redux/slices/notificationSlice';
+import { markAsRead, markAllAsRead, subscribeToNotifications } from '../../services/notificationService';
 import supabase from '../../services/supabase';
 import { respondToInvitation } from '../../services/schedulingService';
 import { approvePlayerRequest, declinePlayerRequest } from '../../services/playerRequestService';
@@ -94,11 +94,22 @@ class Navbar extends Component {
   componentDidMount() {
     window.addEventListener('scroll', this.handleScroll);
     document.addEventListener('mousedown', this.handleClickOutside);
+
+    // Subscribe to real-time notifications for live badge updates
+    const { user } = this.props;
+    if (user?.id) {
+      this.notificationChannel = subscribeToNotifications(user.id, (newNotification) => {
+        this.props.addNotification(newNotification);
+      });
+    }
   }
 
   componentWillUnmount() {
     window.removeEventListener('scroll', this.handleScroll);
     document.removeEventListener('mousedown', this.handleClickOutside);
+    if (this.notificationChannel) {
+      supabase.removeChannel(this.notificationChannel);
+    }
   }
 
   handleClickOutside = (event) => {
@@ -826,6 +837,7 @@ const mapDispatchToProps = {
   markRead,
   markAllRead,
   invitationResponded,
+  addNotification,
 };
 
 export default connect(mapStateToProps, mapDispatchToProps)(Navbar);

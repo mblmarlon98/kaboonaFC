@@ -10,6 +10,9 @@ import {
   getAllActivePlayers,
   cancelEvent,
 } from '../../../services/schedulingService';
+import { supabase } from '../../../services/supabase';
+import { getPresets, getPresetWithPlayers } from '../../../services/squadPresetService';
+import { getInjuredPlayerIds } from '../../../services/injuryService';
 
 /**
  * Position filter categories for player selection
@@ -139,12 +142,28 @@ class MatchScheduler extends Component {
 
       // Cancel confirmation
       cancelConfirmId: null,
+
+      // Presets and injury tracking
+      presets: [],
+      selectionMode: 'manual', // 'manual' | 'preset' | 'all'
+      selectedPresetId: null,
+      injuredPlayerIds: new Set(),
+      positionWarnings: [],
+      realtimeChannels: {},
     };
   }
 
   componentDidMount() {
     this.loadPlayers();
     this.loadMatches();
+    this.loadPresets();
+    this.loadInjuredIds();
+  }
+
+  componentWillUnmount() {
+    Object.values(this.state.realtimeChannels).forEach(ch => {
+      supabase.removeChannel(ch);
+    });
   }
 
   loadPlayers = async () => {
@@ -162,6 +181,24 @@ class MatchScheduler extends Component {
     }
   };
 
+  loadPresets = async () => {
+    try {
+      const presets = await getPresets();
+      this.setState({ presets: presets || [] });
+    } catch (err) {
+      console.warn('Could not fetch presets:', err);
+    }
+  };
+
+  loadInjuredIds = async () => {
+    try {
+      const injuredPlayerIds = await getInjuredPlayerIds();
+      this.setState({ injuredPlayerIds });
+    } catch (err) {
+      console.warn('Could not fetch injured players:', err);
+    }
+  };
+
   loadMatches = async () => {
     this.setState({ matchesLoading: true });
     try {
@@ -170,11 +207,37 @@ class MatchScheduler extends Component {
 
       // Load invitation data for each match in parallel
       await Promise.all(matches.map((m) => this.loadInvitationData(m.id)));
+
+      // Subscribe to real-time updates for match invitations
+      this.subscribeToMatches(matches);
     } catch (err) {
       console.error('Failed to load matches:', err);
       this.setState({ matchesLoading: false });
       this.showToast('Failed to load matches', 'error');
     }
+  };
+
+  subscribeToMatches = (matches) => {
+    // Clean up existing channels
+    Object.values(this.state.realtimeChannels).forEach(ch => {
+      supabase.removeChannel(ch);
+    });
+    const channels = {};
+    matches.forEach(match => {
+      const channel = supabase
+        .channel(`match-invites-${match.id}`)
+        .on('postgres_changes', {
+          event: '*',
+          schema: 'public',
+          table: 'event_invitations',
+          filter: `event_id=eq.${match.id}`,
+        }, () => {
+          this.loadInvitationData(match.id);
+        })
+        .subscribe();
+      channels[match.id] = channel;
+    });
+    this.setState({ realtimeChannels: channels });
   };
 
   loadInvitationData = async (matchId) => {
@@ -222,7 +285,7 @@ class MatchScheduler extends Component {
         next.add(userId);
       }
       return { selectedPlayerIds: next };
-    });
+    }, this.checkPositionGaps);
   };
 
   handleSelectAll = () => {
@@ -231,7 +294,7 @@ class MatchScheduler extends Component {
       const next = new Set(prev.selectedPlayerIds);
       filtered.forEach((p) => next.add(p.user_id));
       return { selectedPlayerIds: next };
-    });
+    }, this.checkPositionGaps);
   };
 
   handleDeselectAll = () => {
@@ -240,7 +303,7 @@ class MatchScheduler extends Component {
       const next = new Set(prev.selectedPlayerIds);
       filtered.forEach((p) => next.delete(p.user_id));
       return { selectedPlayerIds: next };
-    });
+    }, this.checkPositionGaps);
   };
 
   getFilteredPlayers = () => {
@@ -251,6 +314,51 @@ class MatchScheduler extends Component {
       const cat = getPositionCategory(p.position);
       return cat === positionFilter;
     });
+  };
+
+  handleSelectionMode = (mode) => {
+    if (mode === 'all') {
+      const { allPlayers, injuredPlayerIds } = this.state;
+      const allIds = allPlayers
+        .filter(p => !injuredPlayerIds.has(p.user_id))
+        .map(p => p.user_id);
+      this.setState({ selectionMode: 'all', selectedPlayerIds: new Set(allIds), selectedPresetId: null }, this.checkPositionGaps);
+    } else if (mode === 'manual') {
+      this.setState({ selectionMode: 'manual', selectedPlayerIds: new Set(), selectedPresetId: null, positionWarnings: [] });
+    }
+  };
+
+  handlePresetSelect = async (presetId) => {
+    if (!presetId) return;
+    try {
+      const preset = await getPresetWithPlayers(presetId);
+      if (!preset) return;
+      const { injuredPlayerIds } = this.state;
+      const presetPlayerIds = (preset.players || [])
+        .map(p => p.player_id)
+        .filter(id => !injuredPlayerIds.has(id));
+      this.setState({
+        selectionMode: 'preset',
+        selectedPresetId: presetId,
+        selectedPlayerIds: new Set(presetPlayerIds),
+      }, this.checkPositionGaps);
+    } catch (err) {
+      console.warn('Failed to load preset:', err);
+    }
+  };
+
+  checkPositionGaps = () => {
+    const { selectedPlayerIds, allPlayers } = this.state;
+    const selected = allPlayers.filter(p => selectedPlayerIds.has(p.user_id));
+    const positions = selected.map(p => (p.position || '').toUpperCase());
+    const warnings = [];
+
+    if (!positions.some(p => p === 'GK')) warnings.push('No GK selected');
+    if (!positions.some(p => ['CB', 'LB', 'RB', 'LWB', 'RWB'].includes(p))) warnings.push('No defenders selected');
+    if (!positions.some(p => ['CM', 'CDM', 'CAM', 'LM', 'RM'].includes(p))) warnings.push('No midfielders selected');
+    if (!positions.some(p => ['ST', 'CF', 'LW', 'RW'].includes(p))) warnings.push('No attackers selected');
+
+    this.setState({ positionWarnings: warnings });
   };
 
   handleSubmit = async (e) => {
@@ -389,6 +497,36 @@ class MatchScheduler extends Component {
           </div>
         </div>
 
+        {/* Selection mode bar */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap">
+          <button
+            type="button"
+            onClick={() => this.handleSelectionMode('manual')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${this.state.selectionMode === 'manual' ? 'bg-accent-gold text-black' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+          >
+            Manual
+          </button>
+          <button
+            type="button"
+            onClick={() => this.handleSelectionMode('all')}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${this.state.selectionMode === 'all' ? 'bg-accent-gold text-black' : 'bg-white/10 text-white/60 hover:bg-white/20'}`}
+          >
+            All Players
+          </button>
+          {this.state.presets.length > 0 && (
+            <select
+              value={this.state.selectedPresetId || ''}
+              onChange={(e) => this.handlePresetSelect(e.target.value)}
+              className="px-3 py-1.5 bg-white/10 border border-white/10 rounded-lg text-sm text-white focus:outline-none focus:border-accent-gold"
+            >
+              <option value="">From Preset...</option>
+              {this.state.presets.map(p => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+
         {/* Position filter tabs */}
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
           {POSITION_FILTERS.map((filter) => (
@@ -424,6 +562,7 @@ class MatchScheduler extends Component {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
             {filteredPlayers.map((player) => {
               const isSelected = selectedPlayerIds.has(player.user_id);
+              const isInjured = this.state.injuredPlayerIds.has(player.user_id);
               return (
                 <button
                   key={player.id}
@@ -433,7 +572,7 @@ class MatchScheduler extends Component {
                     isSelected
                       ? 'bg-accent-gold/10 border-2 border-accent-gold shadow-lg shadow-accent-gold/10'
                       : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
-                  }`}
+                  } ${isInjured ? 'opacity-40 pointer-events-none' : ''}`}
                 >
                   {/* Checkbox indicator */}
                   <div
@@ -468,9 +607,23 @@ class MatchScheduler extends Component {
                   >
                     {player.position?.toUpperCase() || 'N/A'}
                   </span>
+                  {isInjured && (
+                    <span className="text-red-400 text-xs mt-1 block">Injured</span>
+                  )}
                 </button>
               );
             })}
+          </div>
+        )}
+
+        {/* Position gap warnings */}
+        {this.state.positionWarnings.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {this.state.positionWarnings.map((w, i) => (
+              <span key={i} className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-xs font-medium">
+                {w}
+              </span>
+            ))}
           </div>
         )}
       </div>
