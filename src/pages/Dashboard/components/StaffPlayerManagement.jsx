@@ -215,28 +215,24 @@ class StaffPlayerManagement extends Component {
       const rolePriority = ['owner', 'manager', 'coach', 'admin', 'editor', 'marketing', 'player', 'fan'];
       const primaryRole = rolePriority.find((r) => updatedRoles.includes(r)) || 'fan';
 
+      const profileUpdate = { roles: updatedRoles, role: primaryRole };
+      // If assigning player role, auto-approve (skip pending request flow)
+      if (inviteTargetRole === 'player') {
+        profileUpdate.player_request_status = 'approved';
+      }
+
       const { error } = await supabase
         .from('profiles')
-        .update({ roles: updatedRoles, role: primaryRole })
+        .update(profileUpdate)
         .eq('id', userId);
 
       if (error) throw error;
 
       // If assigning player role, ensure player record exists
       if (inviteTargetRole === 'player') {
-        const { data: existingPlayer } = await supabase
+        await supabase
           .from('players')
-          .select('id')
-          .eq('user_id', userId)
-          .limit(1);
-
-        if (!existingPlayer || existingPlayer.length === 0) {
-          await supabase.from('players').insert({
-            user_id: userId,
-            position: 'CM',
-            jersey_number: null,
-          });
-        }
+          .upsert({ user_id: userId, position: 'CM' }, { onConflict: 'user_id' });
       }
 
       this.setState({
