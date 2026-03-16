@@ -280,6 +280,11 @@ class StaffPlayerManagement extends Component {
 
       if (error) throw error;
 
+      // If removing 'player' role, also delete the player record
+      if (role === 'player') {
+        await supabase.from('players').delete().eq('user_id', userId);
+      }
+
       this.setState({
         successMessage: `Removed ${role} role from ${displayName}`,
       });
