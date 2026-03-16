@@ -251,17 +251,42 @@ class PlayersManagement extends Component {
     this.setState({ actionLoading: player.id });
 
     try {
-      // Update profile role to 'player' if needed
+      // 1. Fetch current profile to get existing roles array
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('roles')
+        .eq('id', player.id)
+        .single();
+
+      const currentRoles = profile?.roles || ['fan'];
+      const newRoles = currentRoles.includes('player') ? currentRoles : [...currentRoles, 'player'];
+
+      // 2. Update profile: set role, roles array, and approval status
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ role: 'player' })
+        .update({
+          role: 'player',
+          roles: newRoles,
+          player_request_status: 'approved',
+        })
         .eq('id', player.id);
 
       if (profileError) {
-        console.error('Error updating profile role:', profileError);
+        console.error('Error updating profile:', profileError);
+        this.setState({ actionLoading: null });
+        return;
       }
 
-      // Send notification to the player
+      // 3. Create player record in players table (the actual squad entry)
+      const { error: playerError } = await supabase
+        .from('players')
+        .upsert({ user_id: player.id, position: 'CM' }, { onConflict: 'user_id' });
+
+      if (playerError) {
+        console.error('Error creating player record:', playerError);
+      }
+
+      // 4. Send notification to the player
       try {
         await createNotification({
           userId: player.id,
@@ -275,13 +300,8 @@ class PlayersManagement extends Component {
         console.warn('Could not send approval notification:', notifError);
       }
 
-      // Update local state
-      this.setState((prevState) => ({
-        players: prevState.players.map((p) =>
-          p.id === player.id ? { ...p, status: 'active', profileRole: 'player' } : p
-        ),
-        actionLoading: null,
-      }), this.filterPlayers);
+      // 5. Refresh from DB to get the new player record
+      this.fetchPlayers();
     } catch (error) {
       console.error('Error approving player:', error);
       this.setState({ actionLoading: null });
