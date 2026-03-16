@@ -34,11 +34,11 @@ class PlayersManagement extends Component {
     this.setState({ isLoading: true });
 
     try {
-      // Fetch profiles with role 'player' or profiles that have a player record
+      // Fetch profiles with role 'player' or who have 'player' in their roles array
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
-        .select('id, full_name, role, created_at')
-        .in('role', ['player', 'pending']);
+        .select('id, full_name, role, roles, created_at')
+        .or('role.in.(player,pending),roles.cs.{player}');
 
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);

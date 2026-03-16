@@ -130,7 +130,11 @@ class Register extends Component {
     this.setState({ isSubmitting: true, formError: null });
 
     try {
-      const role = inviteData ? inviteData.roles[0] : 'fan';
+      // Pick the most significant role from invitation (skip 'fan')
+      const rolePriority = ['owner', 'manager', 'coach', 'admin', 'editor', 'marketing', 'player'];
+      const role = inviteData
+        ? (inviteData.roles.find(r => rolePriority.includes(r)) || inviteData.roles[0] || 'fan')
+        : 'fan';
       const { data, error } = await signUp(email, password, {
         full_name: fullName,
         role,
