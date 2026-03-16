@@ -215,24 +215,21 @@ class StaffPlayerManagement extends Component {
       const rolePriority = ['owner', 'manager', 'coach', 'admin', 'editor', 'marketing', 'player', 'fan'];
       const primaryRole = rolePriority.find((r) => updatedRoles.includes(r)) || 'fan';
 
-      const profileUpdate = { roles: updatedRoles, role: primaryRole };
-      // If assigning player role, auto-approve (skip pending request flow)
       if (inviteTargetRole === 'player') {
-        profileUpdate.player_request_status = 'approved';
-      }
+        // Use SECURITY DEFINER RPC to bypass RLS on players table
+        const { data: result, error: rpcError } = await supabase.rpc(
+          'approve_player_request',
+          { target_user_id: userId }
+        );
+        if (rpcError) throw rpcError;
+        if (result && !result.success) throw new Error(result.error);
+      } else {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ roles: updatedRoles, role: primaryRole })
+          .eq('id', userId);
 
-      const { error } = await supabase
-        .from('profiles')
-        .update(profileUpdate)
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      // If assigning player role, ensure player record exists
-      if (inviteTargetRole === 'player') {
-        await supabase
-          .from('players')
-          .upsert({ user_id: userId, position: 'CM' }, { onConflict: 'user_id' });
+        if (error) throw error;
       }
 
       this.setState({
