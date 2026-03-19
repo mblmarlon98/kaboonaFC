@@ -21,13 +21,13 @@ const POSITION_GROUPS = [
   {
     id: 'midfielders',
     title: 'Midfielders',
-    positions: ['CM', 'CDM', 'CAM', 'LM', 'RM', 'LW', 'RW'],
+    positions: ['CM', 'CDM', 'CAM', 'LM', 'RM'],
     color: 'from-green-500 to-green-600',
   },
   {
     id: 'attackers',
     title: 'Attackers',
-    positions: ['ST', 'CF'],
+    positions: ['ST', 'CF', 'LW', 'RW'],
     color: 'from-red-500 to-red-600',
   },
 ];
