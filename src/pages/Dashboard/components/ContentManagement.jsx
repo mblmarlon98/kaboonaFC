@@ -110,6 +110,15 @@ const ROLE_SECTION_PERMISSIONS = {
   editor: ['hero', 'about', 'glory', 'cta'],
 };
 
+const SECTION_DESCRIPTIONS = {
+  hero: 'Main banner — the first thing visitors see',
+  about: 'Club introduction with image and stats',
+  glory: 'League standing and achievements display',
+  training: 'Training ground info, features, and map location',
+  team_preview: 'Staff members preview on homepage',
+  cta: 'Call-to-action cards for joining the club',
+};
+
 class ContentManagement extends Component {
   constructor(props) {
     super(props);
@@ -566,6 +575,259 @@ class ContentManagement extends Component {
     );
   };
 
+  // ─── Section Previews (read-only, mirroring homepage) ───────────
+
+  renderSectionPreview = (sectionKey, data) => {
+    switch (sectionKey) {
+      case 'hero': return this.renderHeroPreview(data);
+      case 'about': return this.renderAboutPreview(data);
+      case 'glory': return this.renderGloryPreview(data);
+      case 'training': return this.renderTrainingPreview(data);
+      case 'team_preview': return this.renderTeamPreviewPreview(data);
+      case 'cta': return this.renderCtaPreview(data);
+      default: return null;
+    }
+  };
+
+  renderHeroPreview = (data) => {
+    const clubName = data.clubName || '';
+    const clubSuffix = data.clubSuffix || '';
+    const tagline = data.tagline || '';
+    const ctaText1 = data.ctaText1 || '';
+    const ctaText2 = data.ctaText2 || '';
+    if (!clubName && !tagline) return <p className="text-white/30 italic text-center py-6">No content set</p>;
+    return (
+      <div className="relative rounded-xl overflow-hidden bg-gradient-to-b from-surface-dark via-surface-dark-elevated to-surface-dark p-8 text-center">
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute inset-0" style={{
+            backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, rgba(212,175,55,0.1) 35px, rgba(212,175,55,0.1) 70px)',
+          }} />
+        </div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-accent-gold/10 rounded-full blur-[60px]" />
+        <div className="relative z-10">
+          <div className="w-16 h-16 mx-auto mb-4">
+            <img src={`${import.meta.env.BASE_URL}kaboona-logo.png`} alt="" className="w-full h-full object-contain opacity-60" />
+          </div>
+          <h3 className="font-display text-4xl font-bold text-white tracking-wider">
+            {clubName}
+            {clubSuffix && <span className="block text-accent-gold text-2xl mt-1">{clubSuffix}</span>}
+          </h3>
+          {tagline && <p className="text-white/50 mt-3 text-lg">{tagline}</p>}
+          {(ctaText1 || ctaText2) && (
+            <div className="flex items-center justify-center gap-3 mt-6">
+              {ctaText1 && <span className="px-4 py-2 bg-accent-gold/20 text-accent-gold text-sm rounded-lg">{ctaText1}</span>}
+              {ctaText2 && <span className="px-4 py-2 border border-white/20 text-white/60 text-sm rounded-lg">{ctaText2}</span>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  renderAboutPreview = (data) => {
+    const badge = data.badge || '';
+    const title = data.title || '';
+    const location = data.location || '';
+    const description = data.description || '';
+    const image = data.image || '';
+    const stats = [
+      { value: data.stat1Value, label: data.stat1Label },
+      { value: data.stat2Value, label: data.stat2Label },
+      { value: data.stat3Value, label: data.stat3Label },
+      { value: data.stat4Value, label: data.stat4Label },
+    ].filter((s) => s.value || s.label);
+    if (!badge && !title && !image) return <p className="text-white/30 italic text-center py-6">No content set</p>;
+    return (
+      <div>
+        <div className={image ? 'grid grid-cols-1 lg:grid-cols-2 gap-6 items-start' : ''}>
+          <div>
+            {badge && <span className="inline-block px-3 py-1 bg-accent-gold/10 text-accent-gold text-xs font-semibold tracking-wider rounded-full mb-4">{badge}</span>}
+            {title && <h3 className="text-2xl font-display font-bold text-white mb-2">Home of <span className="text-accent-gold">{title}</span></h3>}
+            {location && <p className="text-white/50 mb-3">{location}</p>}
+            {description && <p className="text-white/40 text-sm leading-relaxed">{description}</p>}
+          </div>
+          {image && (
+            <div className="relative">
+              <div className="aspect-[4/3] rounded-xl overflow-hidden">
+                <img src={image} alt="" className="w-full h-full object-cover" />
+              </div>
+              <div className="absolute -top-2 -right-2 w-12 h-12 border-2 border-accent-gold/20 rounded-xl" />
+            </div>
+          )}
+        </div>
+        {stats.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            {stats.map((stat, i) => (
+              <div key={i} className="p-3 bg-surface-dark rounded-lg border border-white/5 text-center">
+                <div className="text-lg font-display font-bold text-accent-gold">{stat.value || '—'}</div>
+                <div className="text-xs text-white/40 uppercase tracking-wider">{stat.label || '—'}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  renderGloryPreview = (data) => {
+    const badge = data.badge || '';
+    const heading = data.heading || '';
+    const leagueTitle = data.leagueTitle || '';
+    const achievementsBadge = data.achievementsBadge || '';
+    const achievementsHeading = data.achievementsHeading || '';
+    const shameBadge = data.shameBadge || '';
+    const shameHeading = data.shameHeading || '';
+    if (!badge && !heading) return <p className="text-white/30 italic text-center py-6">No content set</p>;
+    return (
+      <div className="space-y-4">
+        {badge && <span className="inline-block px-3 py-1 bg-accent-gold/10 text-accent-gold text-xs font-semibold tracking-wider rounded-full">{badge}</span>}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-surface-dark rounded-xl border border-white/5">
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">League</p>
+            {heading && <p className="text-white font-bold">{heading}</p>}
+            {leagueTitle && <p className="text-accent-gold text-sm mt-1">{leagueTitle}</p>}
+          </div>
+          <div className="p-4 bg-surface-dark rounded-xl border border-white/5">
+            {achievementsBadge && <p className="text-accent-gold text-xs font-semibold tracking-wider mb-1">{achievementsBadge}</p>}
+            {achievementsHeading && <p className="text-white font-bold">{achievementsHeading}</p>}
+          </div>
+          <div className="p-4 bg-surface-dark rounded-xl border border-white/5">
+            {shameBadge && <p className="text-red-400 text-xs font-semibold tracking-wider mb-1">{shameBadge}</p>}
+            {shameHeading && <p className="text-white font-bold">{shameHeading}</p>}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  renderTrainingPreview = (data) => {
+    const badge = data.badge || '';
+    const title = data.title || '';
+    const description = data.description || '';
+    const image = data.image || '';
+    const features = [data.feature1, data.feature2, data.feature3, data.feature4].filter(Boolean);
+    const lat = data.lat || '';
+    const lng = data.lng || '';
+    const groundLabel = data.groundLabel || '';
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Image */}
+        <div className="relative aspect-[4/3] rounded-xl overflow-hidden">
+          {image ? (
+            <img src={image} alt="" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full bg-gradient-to-br from-green-800 via-green-700 to-green-900 flex items-center justify-center">
+              <span className="text-white/30 text-sm">No photo uploaded</span>
+            </div>
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-surface-dark/60 via-transparent to-transparent" />
+          {groundLabel && (
+            <div className="absolute bottom-3 left-3">
+              <div className="px-3 py-1.5 bg-black/60 backdrop-blur-sm rounded-lg">
+                <p className="text-white/90 text-xs font-medium">{groundLabel}</p>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Content */}
+        <div>
+          {badge && <span className="inline-block px-3 py-1 bg-accent-gold/10 text-accent-gold text-xs font-semibold tracking-wider rounded-full mb-3">{badge}</span>}
+          {title && <h3 className="text-xl font-display font-bold text-white mb-2">{title}</h3>}
+          {description && <p className="text-white/40 text-sm leading-relaxed mb-4">{description}</p>}
+          {features.length > 0 && (
+            <div className="space-y-2 mb-4">
+              {features.map((f, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-accent-gold/20 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-3 h-3 text-accent-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-white/60 text-sm">{f}</span>
+                </div>
+              ))}
+            </div>
+          )}
+          {(lat || lng) && (
+            <div className="p-3 bg-surface-dark rounded-lg border border-white/5">
+              <p className="text-white/30 text-xs uppercase tracking-wider mb-1">GPS Coordinates</p>
+              <p className="text-white/70 font-mono text-sm">
+                {lat}&deg;{parseFloat(lat) >= 0 ? 'N' : 'S'}, {lng}&deg;{parseFloat(lng) >= 0 ? 'E' : 'W'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  renderTeamPreviewPreview = (data) => {
+    const badge = data.badge || '';
+    const heading = data.heading || '';
+    const description = data.description || '';
+    if (!badge && !heading && !description) return <p className="text-white/30 italic text-center py-6">No content set</p>;
+    return (
+      <div className="text-center py-4">
+        {badge && <span className="inline-block px-3 py-1 bg-accent-gold/10 text-accent-gold text-xs font-semibold tracking-wider rounded-full mb-4">{badge}</span>}
+        {heading && <h3 className="text-2xl font-display font-bold text-white mb-3">{heading}</h3>}
+        {description && <p className="text-white/40 max-w-lg mx-auto">{description}</p>}
+      </div>
+    );
+  };
+
+  renderCtaPreview = (data) => {
+    const badge = data.badge || '';
+    const heading = data.heading || '';
+    const description = data.description || '';
+    const stats = [
+      { value: data.stat1Value, label: data.stat1Label },
+      { value: data.stat2Value, label: data.stat2Label },
+      { value: data.stat3Value, label: data.stat3Label },
+      { value: data.stat4Value, label: data.stat4Label },
+    ].filter((s) => s.value || s.label);
+    if (!badge && !heading) return <p className="text-white/30 italic text-center py-6">No content set</p>;
+    return (
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="text-center">
+          {badge && <span className="inline-block px-3 py-1 bg-white/5 text-white/50 text-xs font-semibold tracking-wider rounded-full mb-3">{badge}</span>}
+          {heading && (
+            <h3 className="text-2xl font-display font-bold text-white">
+              {heading.includes('Pride') ? <>Join the <span className="text-accent-gold">Pride</span></> : heading}
+            </h3>
+          )}
+          {description && <p className="text-white/40 text-sm mt-2 max-w-lg mx-auto">{description}</p>}
+        </div>
+        {/* Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-accent-gold/10 to-transparent border border-accent-gold/20">
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">{data.card1Subtitle || ''}</p>
+            <h4 className="text-lg font-display font-bold text-white mb-2">{data.card1Title || ''}</h4>
+            <p className="text-white/40 text-xs leading-relaxed mb-3">{data.card1Description || ''}</p>
+            {data.card1ButtonText && <span className="inline-block px-3 py-1.5 bg-accent-gold/20 text-accent-gold text-xs rounded-lg">{data.card1ButtonText}</span>}
+          </div>
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-secondary-blue/10 to-transparent border border-secondary-blue/20">
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">{data.card2Subtitle || ''}</p>
+            <h4 className="text-lg font-display font-bold text-white mb-2">{data.card2Title || ''}</h4>
+            <p className="text-white/40 text-xs leading-relaxed mb-3">{data.card2Description || ''}</p>
+            {data.card2ButtonText && <span className="inline-block px-3 py-1.5 bg-secondary-blue/20 text-secondary-blue text-xs rounded-lg">{data.card2ButtonText}</span>}
+          </div>
+        </div>
+        {/* Stats */}
+        {stats.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-4 bg-surface-dark rounded-xl border border-white/5">
+            {stats.map((s, i) => (
+              <div key={i} className="text-center">
+                <div className="text-lg font-display font-bold text-accent-gold">{s.value || '—'}</div>
+                <div className="text-xs text-white/40 uppercase tracking-wider">{s.label || '—'}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── Main Render ────────────────────────────────────────────────
 
   render() {
@@ -649,7 +911,12 @@ class ContentManagement extends Component {
                 return (
                   <div key={sectionKey} className="bg-surface-dark-elevated rounded-xl border border-white/10 overflow-hidden">
                     <div className="p-6 border-b border-white/10 flex items-center justify-between">
-                      <h3 className="text-lg font-display font-bold text-white">{definition.name}</h3>
+                      <div>
+                        <h3 className="text-lg font-display font-bold text-white">{definition.name}</h3>
+                        {SECTION_DESCRIPTIONS[sectionKey] && (
+                          <p className="text-white/40 text-sm mt-0.5">{SECTION_DESCRIPTIONS[sectionKey]}</p>
+                        )}
+                      </div>
                       {!isEditing ? (
                         <button
                           onClick={() => this.startEditing(sectionKey)}
@@ -680,45 +947,39 @@ class ContentManagement extends Component {
                         </div>
                       )}
                     </div>
-                    <div className="p-6 space-y-4">
-                      {definition.fields.map((field) => (
-                        <div key={field.key}>
-                          <label className="block text-white/60 text-sm mb-2">{field.label}</label>
-                          {isEditing ? (
-                            field.type === 'image' ? (
-                              this.renderImageField(
-                                field.key,
-                                editedValues[field.key],
-                                (file) => this.uploadSectionImage(sectionKey, field.key, file)
-                              )
-                            ) : field.type === 'textarea' ? (
-                              <textarea
-                                value={editedValues[field.key] || ''}
-                                onChange={(e) => this.handleFieldChange(field.key, e.target.value)}
-                                rows={3}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold resize-none"
-                              />
-                            ) : (
-                              <input
-                                type="text"
-                                value={editedValues[field.key] || ''}
-                                onChange={(e) => this.handleFieldChange(field.key, e.target.value)}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold"
-                              />
-                            )
-                          ) : field.type === 'image' ? (
-                            sectionValues[field.key] ? (
-                              <img src={sectionValues[field.key]} alt="" className="h-24 rounded-lg object-cover" />
-                            ) : (
-                              <p className="text-white/30 italic bg-white/5 px-4 py-3 rounded-lg">No image set</p>
-                            )
-                          ) : (
-                            <p className="text-white/80 bg-white/5 px-4 py-3 rounded-lg">
-                              {sectionValues[field.key] || <span className="text-white/30 italic">Not set</span>}
-                            </p>
-                          )}
+                    <div className="p-6">
+                      {isEditing ? (
+                        <div className="space-y-4">
+                          {definition.fields.map((field) => (
+                            <div key={field.key}>
+                              <label className="block text-white/60 text-sm mb-2">{field.label}</label>
+                              {field.type === 'image' ? (
+                                this.renderImageField(
+                                  field.key,
+                                  editedValues[field.key],
+                                  (file) => this.uploadSectionImage(sectionKey, field.key, file)
+                                )
+                              ) : field.type === 'textarea' ? (
+                                <textarea
+                                  value={editedValues[field.key] || ''}
+                                  onChange={(e) => this.handleFieldChange(field.key, e.target.value)}
+                                  rows={3}
+                                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold resize-none"
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={editedValues[field.key] || ''}
+                                  onChange={(e) => this.handleFieldChange(field.key, e.target.value)}
+                                  className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-white/30 focus:outline-none focus:border-accent-gold"
+                                />
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      ) : (
+                        this.renderSectionPreview(sectionKey, sectionValues)
+                      )}
                     </div>
                   </div>
                 );
