@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-03-16T08:29:49.179Z",
+  "lastUpdated": "2026-03-23T08:25:26.376Z",
   "source": "https://agdsports.com/tournament/the-new-camp-edition-division-3/",
   "competition": "The New Camp Edition (Division 3)",
   "standings": [
@@ -294,6 +294,15 @@
     {
       "name": "Isaac Otong Biel",
       "position": "MID",
+      "age": 23,
+      "goals": 0,
+      "assists": 0,
+      "yellowCards": 0,
+      "redCards": 0
+    },
+    {
+      "name": "Joel Njoroge",
+      "position": "DEF",
       "age": 23,
       "goals": 0,
       "assists": 0,
